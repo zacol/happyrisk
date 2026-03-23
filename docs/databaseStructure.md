@@ -124,15 +124,15 @@ Join table linking users to specific projects they are working on.
 
 Configurable survey schedule per project (US 5.2).
 
-| Column        | Type          | Constraints                         | Description                              |
-| :------------ | :------------ | :---------------------------------- | :--------------------------------------- |
-| `id`          | `UUID`        | PK, default `uuid()`                | Unique identifier.                       |
-| `project_id`  | `UUID`        | FK → `Project.id`, NOT NULL, UNIQUE | One config per project.                  |
-| `frequency`   | `ENUM`        | NOT NULL, default `WEEKLY`          | `WEEKLY` or `BIWEEKLY`.                  |
-| `day_of_week` | `SMALLINT`    | NOT NULL, default `5`               | ISO day (1=Mon, 7=Sun). Default: Friday. |
-| `time_utc`    | `TIME`        | NOT NULL, default `'14:00'`         | Time to send the DM (UTC).               |
-| `is_active`   | `BOOLEAN`     | NOT NULL, default `true`            | Enable/disable surveys for this project. |
-| `updated_at`  | `TIMESTAMPTZ` | NOT NULL, `@updatedAt`              | Last update timestamp.                   |
+| Column        | Type          | Constraints                         | Description                                                     |
+| :------------ | :------------ | :---------------------------------- | :-------------------------------------------------------------- |
+| `id`          | `UUID`        | PK, default `uuid()`                | Unique identifier.                                              |
+| `project_id`  | `UUID`        | FK → `Project.id`, NOT NULL, UNIQUE | One config per project.                                         |
+| `frequency`   | `ENUM`        | NOT NULL, default `WEEKLY`          | `WEEKLY` or `BIWEEKLY`.                                         |
+| `day_of_week` | `SMALLINT`    | NOT NULL, default `5`               | ISO day (1=Mon, 7=Sun). Default: Friday.                        |
+| `time_utc`    | `VARCHAR(5)`  | NOT NULL, default `'14:00'`         | Time to send the DM (UTC) in "HH:MM" format. Validated via Zod. |
+| `is_active`   | `BOOLEAN`     | NOT NULL, default `true`            | Enable/disable surveys for this project.                        |
+| `updated_at`  | `TIMESTAMPTZ` | NOT NULL, `@updatedAt`              | Last update timestamp.                                          |
 
 ---
 
@@ -177,17 +177,17 @@ Tracks **who** was invited and whether they responded — but stores **no conten
 
 Stores the **anonymous content** of a survey interaction. Contains **no `user_id`**.
 
-| Column                | Type       | Constraints                     | Description                                            |
-| :-------------------- | :--------- | :------------------------------ | :----------------------------------------------------- |
-| `id`                  | `UUID`     | PK, default `uuid()`            | Unique identifier.                                     |
-| `survey_cycle_id`     | `UUID`     | FK → `SurveyCycle.id`, NOT NULL | The cycle this response belongs to.                    |
-| `project_id`          | `UUID`     | FK → `Project.id`, NOT NULL     | Denormalized for efficient aggregation queries.        |
-| `rating`              | `SMALLINT` | NOT NULL, CHECK 1–5             | Happiness Index score.                                 |
-| `initial_comment`     | `TEXT`     | NULLABLE                        | User's first text after rating.                        |
-| `follow_up_question`  | `TEXT`     | NULLABLE                        | AI #1 generated question.                              |
-| `follow_up_answer`    | `TEXT`     | NULLABLE                        | User's answer to the follow-up.                        |
-| `conversation_status` | `ENUM`     | NOT NULL, default `PARTIAL`     | `PARTIAL` (only rating), `COMPLETE` (full convo).      |
-| `created_at`          | `DATE`     | NOT NULL, default `now()`       | Record creation timestamp (date only, no time — GDPR). |
+| Column                | Type       | Constraints                     | Description                                                  |
+| :-------------------- | :--------- | :------------------------------ | :----------------------------------------------------------- |
+| `id`                  | `UUID`     | PK, default `uuid()`            | Unique identifier.                                           |
+| `survey_cycle_id`     | `UUID`     | FK → `SurveyCycle.id`, NOT NULL | The cycle this response belongs to.                          |
+| `project_id`          | `UUID`     | FK → `Project.id`, NOT NULL     | Denormalized for efficient aggregation queries.              |
+| `rating`              | `SMALLINT` | NOT NULL                        | Happiness Index score (1–5, validated at app level via Zod). |
+| `initial_comment`     | `TEXT`     | NULLABLE                        | User's first text after rating.                              |
+| `follow_up_question`  | `TEXT`     | NULLABLE                        | AI #1 generated question.                                    |
+| `follow_up_answer`    | `TEXT`     | NULLABLE                        | User's answer to the follow-up.                              |
+| `conversation_status` | `ENUM`     | NOT NULL, default `PARTIAL`     | `PARTIAL` (only rating), `COMPLETE` (full convo).            |
+| `created_at`          | `DATE`     | NOT NULL, default `now()`       | Record creation timestamp (date only, no time — GDPR).       |
 
 **Indexes:** `survey_cycle_id`, `project_id`, (`project_id`, `created_at`)
 
@@ -444,3 +444,42 @@ The core privacy mechanism relies on a **physical separation** of identity and c
 2. For projects with fewer than 5 responses in a cycle, only `ThematicSummary` is exposed — raw `SurveyResponse` data is hidden.
 3. `SurveyResponse.created_at` uses date-level precision (no exact timestamps) to prevent timing-based de-anonymization.
 4. No IP addresses or device identifiers are logged anywhere in the schema.
+
+---
+
+## Implementation Notes
+
+> These notes document deviations between this specification and the actual Prisma schema (`apps/api/prisma/schema.prisma`).
+
+### Type Mappings
+
+| Column                  | Doc Type             | Prisma Type             | Reason                                                                                |
+| :---------------------- | :------------------- | :---------------------- | :------------------------------------------------------------------------------------ |
+| `SurveyConfig.time_utc` | `TIME`               | `String @db.VarChar(5)` | Prisma lacks a native TIME scalar. Stored as "HH:MM" string, validated via Zod regex. |
+| `SurveyResponse.rating` | `SMALLINT CHECK 1–5` | `Int @db.SmallInt`      | No DB-level CHECK constraint. Range 1–5 enforced at application level via Zod.        |
+
+### Cascade Delete Policy
+
+The following `onDelete` rules are applied in the Prisma schema:
+
+| Relation                          | onDelete   | Reason                                    |
+| :-------------------------------- | :--------- | :---------------------------------------- |
+| User → RefreshToken               | `Cascade`  | Session data, cleaned on user removal     |
+| User → OAuthAccount               | `Cascade`  | Identity link, cleaned on user removal    |
+| Project → ProjectMembership       | `Cascade`  | Membership is scoped to project lifecycle |
+| SurveyCycle → SurveyParticipation | `Restrict` | Historical response rate data             |
+| SurveyCycle → SurveyResponse      | `Restrict` | Anonymous data is irreplaceable           |
+| SurveyResponse → AIAnalysis       | `Restrict` | Prevent accidental loss of analysis       |
+| All other FKs                     | `Restrict` | Default — protect core domain entities    |
+
+### Prisma Version
+
+Using **Prisma 7.x** with `prisma-client` generator (`moduleFormat = "cjs"` for NestJS CJS compatibility). Database connection configured via `prisma.config.ts` and `@prisma/adapter-pg` driver adapter. Generated client output: `apps/api/src/generated/prisma`.
+
+### Database Infrastructure (Supabase)
+
+The project uses Supabase strictly as a managed PostgreSQL hosting provider.
+
+- **Connection Strategy:** We treat our NestJS backend as a traditional, persistent server. Therefore, we use a Direct Connection URL (port `5432`) for all application queries and migrations, completely bypassing Supabase's connection pooler (`pgbouncer` / Supavisor).
+- **Connection Pooling:** We rely entirely on Prisma's built-in connection pooling mechanism.
+- **Excluded Features:** Supabase Auth (GoTrue), Storage, and Edge Functions are intentionally completely ignored in favor of our own implementation.

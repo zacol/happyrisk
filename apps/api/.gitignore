@@ -6,3 +6,12 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Environment
+.env
+
+# Generated Prisma Client
+src/generated/
+
+# Lockfile (managed at monorepo root)
+pnpm-lock.yaml
