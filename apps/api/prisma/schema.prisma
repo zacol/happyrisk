@@ -101,7 +101,7 @@ enum RiskActionType {
 // ─────────────────────────────────────────────
 
 model User {
-  id       String   @id @default(uuid()) @db.Uuid
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email    String   @unique @db.VarChar(255)
   name     String?  @db.VarChar(255)
   image    String?
@@ -109,7 +109,7 @@ model User {
   isActive Boolean  @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   oauthAccounts        OAuthAccount[]
   refreshTokens        RefreshToken[]
@@ -124,13 +124,13 @@ model User {
 }
 
 model OAuthAccount {
-  id                String @id @default(uuid()) @db.Uuid
+  id                String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId            String @map("user_id") @db.Uuid
   provider          String @db.VarChar(50)
   providerAccountId String @map("provider_account_id") @db.VarChar(255)
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -140,7 +140,7 @@ model OAuthAccount {
 }
 
 model RefreshToken {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String   @map("user_id") @db.Uuid
   hashedToken String   @unique @map("hashed_token")
   expiresAt   DateTime @map("expires_at") @db.Timestamptz
@@ -160,13 +160,13 @@ model RefreshToken {
 // ─────────────────────────────────────────────
 
 model Team {
-  id                String  @id @default(uuid()) @db.Uuid
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name              String  @db.VarChar(255)
   departmentSegment String? @map("department_segment") @db.VarChar(100)
   isActive          Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   memberships TeamMembership[]
 
@@ -174,7 +174,7 @@ model Team {
 }
 
 model TeamMembership {
-  id       String   @id @default(uuid()) @db.Uuid
+  id       String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId   String   @map("user_id") @db.Uuid
   teamId   String   @map("team_id") @db.Uuid
   joinedAt DateTime @default(now()) @map("joined_at") @db.Timestamptz
@@ -188,13 +188,13 @@ model TeamMembership {
 }
 
 model Project {
-  id               String  @id @default(uuid()) @db.Uuid
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name             String  @db.VarChar(255)
   slackWorkspaceId String? @unique @map("slack_workspace_id") @db.VarChar(64)
   isActive         Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   memberships        ProjectMembership[]
   surveyConfig       SurveyConfig?
@@ -208,7 +208,7 @@ model Project {
 }
 
 model ProjectMembership {
-  id          String      @id @default(uuid()) @db.Uuid
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId      String      @map("user_id") @db.Uuid
   projectId   String      @map("project_id") @db.Uuid
   slackUserId String?     @map("slack_user_id") @db.VarChar(64)
@@ -229,14 +229,14 @@ model ProjectMembership {
 // ─────────────────────────────────────────────
 
 model SurveyConfig {
-  id        String          @id @default(uuid()) @db.Uuid
+  id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   projectId String          @unique @map("project_id") @db.Uuid
   frequency SurveyFrequency @default(WEEKLY)
   dayOfWeek Int             @default(5) @map("day_of_week") @db.SmallInt
   timeUtc   String          @default("14:00") @map("time_utc") @db.VarChar(5)
   isActive  Boolean         @default(true) @map("is_active")
 
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Restrict)
 
@@ -244,7 +244,7 @@ model SurveyConfig {
 }
 
 model SurveyCycle {
-  id          String            @id @default(uuid()) @db.Uuid
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   projectId   String            @map("project_id") @db.Uuid
   periodStart DateTime          @map("period_start") @db.Date
   periodEnd   DateTime          @map("period_end") @db.Date
@@ -265,7 +265,7 @@ model SurveyCycle {
 
 /// ⚠️ Anonymity Boundary: tracks WHO was invited — no content stored.
 model SurveyParticipation {
-  id            String              @id @default(uuid()) @db.Uuid
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId        String              @map("user_id") @db.Uuid
   surveyCycleId String              @map("survey_cycle_id") @db.Uuid
   status        ParticipationStatus @default(PENDING)
@@ -283,7 +283,7 @@ model SurveyParticipation {
 /// ⚠️ Anonymity Boundary: stores WHAT was said — no user_id.
 /// created_at uses DATE precision (not TIMESTAMPTZ) to prevent de-anonymization.
 model SurveyResponse {
-  id                 String             @id @default(uuid()) @db.Uuid
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   surveyCycleId      String             @map("survey_cycle_id") @db.Uuid
   projectId          String             @map("project_id") @db.Uuid
   rating             Int                @db.SmallInt
@@ -309,7 +309,7 @@ model SurveyResponse {
 // ─────────────────────────────────────────────
 
 model AIAnalysis {
-  id                String           @id @default(uuid()) @db.Uuid
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   surveyResponseId  String           @unique @map("survey_response_id") @db.Uuid
   sentiment         Sentiment
   category          FeedbackCategory
@@ -331,7 +331,7 @@ model AIAnalysis {
 }
 
 model HappinessSnapshot {
-  id                String  @id @default(uuid()) @db.Uuid
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   projectId         String  @map("project_id") @db.Uuid
   surveyCycleId     String  @map("survey_cycle_id") @db.Uuid
   averageRating     Decimal @map("average_rating") @db.Decimal(3, 2)
@@ -355,7 +355,7 @@ model HappinessSnapshot {
 // ─────────────────────────────────────────────
 
 model Risk {
-  id           String           @id @default(uuid()) @db.Uuid
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   projectId    String           @map("project_id") @db.Uuid
   title        String           @db.VarChar(255)
   description  String?
@@ -369,7 +369,7 @@ model Risk {
   createdById  String?          @map("created_by_id") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   project    Project      @relation(fields: [projectId], references: [id], onDelete: Restrict)
   aiAnalysis AIAnalysis?  @relation(fields: [aiAnalysisId], references: [id], onDelete: Restrict)
@@ -383,7 +383,7 @@ model Risk {
 }
 
 model RiskAction {
-  id               String         @id @default(uuid()) @db.Uuid
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   riskId           String         @map("risk_id") @db.Uuid
   performedById    String         @map("performed_by_id") @db.Uuid
   actionType       RiskActionType @map("action_type")
@@ -404,7 +404,7 @@ model RiskAction {
 // ─────────────────────────────────────────────
 
 model ThematicSummary {
-  id            String @id @default(uuid()) @db.Uuid
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   projectId     String @map("project_id") @db.Uuid
   surveyCycleId String @map("survey_cycle_id") @db.Uuid
   summaryText   String @map("summary_text")

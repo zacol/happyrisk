@@ -1,0 +1,89 @@
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import { Strategy, VerifyCallback, Profile } from 'passport-google-oauth20';
+import { PrismaService } from '../../prisma/prisma.service';
+
+@Injectable()
+export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+  constructor(
+    configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
+    super({
+      clientID: configService.getOrThrow<string>('GOOGLE_CLIENT_ID'),
+      clientSecret: configService.getOrThrow<string>('GOOGLE_CLIENT_SECRET'),
+      callbackURL: configService.getOrThrow<string>('GOOGLE_CALLBACK_URL'),
+      scope: ['email', 'profile'],
+    });
+  }
+
+  async validate(
+    _accessToken: string,
+    _refreshToken: string,
+    profile: Profile,
+    done: VerifyCallback,
+  ): Promise<void> {
+    const email = profile.emails?.[0]?.value;
+    if (!email) {
+      return done(new UnauthorizedException('NoEmailProvided'), undefined);
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, name: true, role: true, isActive: true },
+    });
+
+    if (!user) {
+      return done(new UnauthorizedException('UserNotFound'), undefined);
+    }
+
+    if (!user.isActive) {
+      return done(new UnauthorizedException('AccountDeactivated'), undefined);
+    }
+
+    // Link OAuthAccount if not already linked
+    const existingOAuth = await this.prisma.oAuthAccount.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: 'google',
+          providerAccountId: profile.id,
+        },
+      },
+    });
+
+    if (!existingOAuth) {
+      await this.prisma.oAuthAccount.create({
+        data: {
+          userId: user.id,
+          provider: 'google',
+          providerAccountId: profile.id,
+        },
+      });
+    }
+
+    // Update user avatar from Google profile if available
+    const photo = profile.photos?.[0]?.value;
+
+    if (photo && !user.name) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          image: photo,
+          name: profile.displayName || undefined,
+        },
+      });
+    } else if (photo) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { image: photo },
+      });
+    }
+
+    return done(null, {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+  }
+}

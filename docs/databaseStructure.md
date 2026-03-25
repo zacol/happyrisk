@@ -48,7 +48,7 @@ A team (e.g., "Backend Squad", "Mobile QA").
 | `department_segment` | `VARCHAR(100)` | NULLABLE                  | Segment tag for benchmarking (e.g., "Backend", "Frontend", "QA"). |
 | `is_active`          | `BOOLEAN`      | NOT NULL, default `true`  | Whether the team is active.                                       |
 | `created_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Record creation timestamp.                                        |
-| `updated_at`         | `TIMESTAMPTZ`  | NOT NULL, `@updatedAt`    | Last update timestamp.                                            |
+| `updated_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Last update timestamp (`@updatedAt`).                             |
 
 ---
 
@@ -63,7 +63,7 @@ A cross-functional project or initiative.
 | `slack_workspace_id` | `VARCHAR(64)`  | NULLABLE, UNIQUE          | Slack workspace ID for project-specific communication. |
 | `is_active`          | `BOOLEAN`      | NOT NULL, default `true`  | Whether the project is currently active.               |
 | `created_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Record creation timestamp.                             |
-| `updated_at`         | `TIMESTAMPTZ`  | NOT NULL, `@updatedAt`    | Last update timestamp.                                 |
+| `updated_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Last update timestamp (`@updatedAt`).                  |
 
 ---
 
@@ -80,9 +80,11 @@ Any person using the platform. Role determines access level.
 | `role`       | `ENUM`         | NOT NULL, default `USER`  | Global role: `USER` or `ADMIN`.                   |
 | `is_active`  | `BOOLEAN`      | NOT NULL, default `true`  | Whether the user account is active.               |
 | `created_at` | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Record creation timestamp.                        |
-| `updated_at` | `TIMESTAMPTZ`  | NOT NULL, `@updatedAt`    | Last update timestamp.                            |
+| `updated_at` | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Last update timestamp (`@updatedAt`).             |
 
 **Indexes:** `email`
+
+> **Authentication Note:** User accounts must be pre-created by an Administrator before a user can log in via Google OAuth. Login attempts with email addresses that do not match an existing active `User` record are rejected (see US 5.1, US 5.6).
 
 ---
 
@@ -132,7 +134,7 @@ Configurable survey schedule per project (US 5.2).
 | `day_of_week` | `SMALLINT`    | NOT NULL, default `5`               | ISO day (1=Mon, 7=Sun). Default: Friday.                        |
 | `time_utc`    | `VARCHAR(5)`  | NOT NULL, default `'14:00'`         | Time to send the DM (UTC) in "HH:MM" format. Validated via Zod. |
 | `is_active`   | `BOOLEAN`     | NOT NULL, default `true`            | Enable/disable surveys for this project.                        |
-| `updated_at`  | `TIMESTAMPTZ` | NOT NULL, `@updatedAt`              | Last update timestamp.                                          |
+| `updated_at`  | `TIMESTAMPTZ` | NOT NULL, default `now()`           | Last update timestamp (`@updatedAt`).                           |
 
 ---
 
@@ -235,7 +237,7 @@ Risk Registry entries — either AI-generated or manually created by a Leader (U
 | `ai_analysis_id` | `UUID`         | FK → `AIAnalysis.id`, NULLABLE, UNIQUE | Link to the source analysis (if AI-generated).              |
 | `created_by_id`  | `UUID`         | FK → `User.id`, NULLABLE               | User who created a manual risk.                             |
 | `created_at`     | `TIMESTAMPTZ`  | NOT NULL, default `now()`              | Record creation timestamp.                                  |
-| `updated_at`     | `TIMESTAMPTZ`  | NOT NULL, `@updatedAt`                 | Last update timestamp.                                      |
+| `updated_at`     | `TIMESTAMPTZ`  | NOT NULL, default `now()`              | Last update timestamp (`@updatedAt`).                       |
 
 **Indexes:** `project_id`, `status`, (`project_id`, `status`)
 
@@ -300,17 +302,19 @@ Pre-calculated weekly aggregates for dashboard charts and benchmarking (US 3.1, 
 
 Managed by the NestJS backend to link third-party identities (e.g., Google OAuth) to internal users.
 
-| Column                | Type          | Constraints               | Description                          |
-| :-------------------- | :------------ | :------------------------ | :----------------------------------- |
-| `id`                  | `UUID`        | PK, default `uuid()`      | Unique identifier.                   |
-| `user_id`             | `UUID`        | FK → `User.id`, NOT NULL  | The internal user.                   |
-| `provider`            | `VARCHAR`     | NOT NULL                  | e.g., `google`.                      |
-| `provider_account_id` | `VARCHAR`     | NOT NULL                  | Unique account ID from the provider. |
-| `created_at`          | `TIMESTAMPTZ` | NOT NULL, default `now()` | Record creation timestamp.           |
-| `updated_at`          | `TIMESTAMPTZ` | NOT NULL, `@updatedAt`    | Last update timestamp.               |
+| Column                | Type          | Constraints               | Description                           |
+| :-------------------- | :------------ | :------------------------ | :------------------------------------ |
+| `id`                  | `UUID`        | PK, default `uuid()`      | Unique identifier.                    |
+| `user_id`             | `UUID`        | FK → `User.id`, NOT NULL  | The internal user.                    |
+| `provider`            | `VARCHAR`     | NOT NULL                  | e.g., `google`.                       |
+| `provider_account_id` | `VARCHAR`     | NOT NULL                  | Unique account ID from the provider.  |
+| `created_at`          | `TIMESTAMPTZ` | NOT NULL, default `now()` | Record creation timestamp.            |
+| `updated_at`          | `TIMESTAMPTZ` | NOT NULL, default `now()` | Last update timestamp (`@updatedAt`). |
 
 **Constraints:** `UNIQUE(provider, provider_account_id)`
 **Indexes:** `user_id`
+
+> **Authentication Note:** `OAuthAccount` records are only created for users who already exist in the `User` table. During the OAuth flow, the system links the OAuth provider identity to a pre-existing `User` record matched by email. The system never automatically creates new `User` records during login (see US 5.6).
 
 ---
 
@@ -453,10 +457,12 @@ The core privacy mechanism relies on a **physical separation** of identity and c
 
 ### Type Mappings
 
-| Column                  | Doc Type             | Prisma Type             | Reason                                                                                |
-| :---------------------- | :------------------- | :---------------------- | :------------------------------------------------------------------------------------ |
-| `SurveyConfig.time_utc` | `TIME`               | `String @db.VarChar(5)` | Prisma lacks a native TIME scalar. Stored as "HH:MM" string, validated via Zod regex. |
-| `SurveyResponse.rating` | `SMALLINT CHECK 1–5` | `Int @db.SmallInt`      | No DB-level CHECK constraint. Range 1–5 enforced at application level via Zod.        |
+| Column                  | Doc Type             | Prisma Type                                                      | Reason                                                                                                                                |
+| :---------------------- | :------------------- | :--------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------ |
+| `*.id`                  | `UUID`               | `String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid` | Native PostgreSQL UUID generation (`gen_random_uuid()`) is used instead of Prisma's `uuid()` to ensure Supabase Studio compatibility. |
+| `*.updated_at`          | `TIMESTAMPTZ`        | `DateTime @default(now()) @updatedAt`                            | Explicit DB-level default is required in addition to `@updatedAt` to allow creation via Supabase Studio.                              |
+| `SurveyConfig.time_utc` | `TIME`               | `String @db.VarChar(5)`                                          | Prisma lacks a native TIME scalar. Stored as "HH:MM" string, validated via Zod regex.                                                 |
+| `SurveyResponse.rating` | `SMALLINT CHECK 1–5` | `Int @db.SmallInt`                                               | No DB-level CHECK constraint. Range 1–5 enforced at application level via Zod.                                                        |
 
 ### Cascade Delete Policy
 

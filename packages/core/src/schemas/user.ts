@@ -8,15 +8,19 @@ import { userRoleSchema } from './enums';
 export const userCreateSchema = z.object({
   email: z.email().max(255),
   name: z.string().max(255).nullish(),
-  role: userRoleSchema.default('USER'),
+  role: userRoleSchema.optional(),
 });
 
 export const userUpdateSchema = z.object({
   name: z.string().max(255).nullish(),
-  image: z.url().nullish(),
   role: userRoleSchema.optional(),
   isActive: z.boolean().optional(),
 });
 
+export const changeRoleSchema = z.object({
+  role: userRoleSchema,
+});
+
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
+export type ChangeRole = z.infer<typeof changeRoleSchema>;

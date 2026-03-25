@@ -109,7 +109,8 @@ This document outlines the functional requirements for HappyRisk AI from the per
 **so that** I can pre-register a user before their first login.
 
 - **AC 1:** An admin panel provides a form to create a new `User` by entering an email and name.
-- **AC 2:** The created user will be linked to an `Account` automatically upon their first login with a matching email (as described in US 5.5).
+- **AC 2:** The created user will be linked to an `OAuthAccount` automatically upon their first successful login with a matching email (as described in US 5.6).
+- **AC 3:** User accounts created this way are required before a user can log in - login attempts without a pre-existing active account are rejected.
 
 ### US 5.2: View and List Users
 
@@ -148,14 +149,14 @@ This document outlines the functional requirements for HappyRisk AI from the per
 
 ### US 5.6: User Provisioning and Account Linking
 
-**As an** Administrator or a new User,  
-**I want** the system to correctly create and link user profiles during the login process,  
-**so that** user access is managed seamlessly whether they are pre-registered or signing up for the first time.
+**As an** Administrator,  
+**I want** the system to require pre-created user accounts before allowing login via Google OAuth,  
+**so that** I maintain full control over who can access the system.
 
-- **AC 1:** An Administrator can create a `User` record with an email before the user's first login.
-- **AC 2:** When a user logs in for the first time via Google, the system searches for a `User` record matching their Google account email.
-- **AC 3:** If a matching `User` is found, the `Account` is linked to the existing `User` record.
-- **AC 4:** If no matching `User` is found, a new `User` record is created and linked to the `Account`.
+- **AC 1:** An Administrator must create a `User` record with an email before the user's first login (as described in US 5.1).
+- **AC 2:** When a user attempts to log in via Google, the system searches for a `User` record matching their Google account email.
+- **AC 3:** If a matching `User` is found and the `User.is_active` status is `true`, the `OAuthAccount` is linked to the existing `User` record and login proceeds successfully.
+- **AC 4:** If no matching `User` is found, or if the matching `User` has `is_active = false`, the login attempt is rejected and the user is redirected with an appropriate error message.
 
 ### US 5.7: Secure Dashboard Login
 

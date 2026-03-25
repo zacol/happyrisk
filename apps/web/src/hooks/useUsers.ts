@@ -1,0 +1,106 @@
+'use client';
+
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryOptions,
+  type UseQueryResult,
+  type UseMutationOptions,
+  type UseMutationResult,
+} from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import type { User } from '@happyrisk/core';
+import type { UserCreate, UserUpdate } from '@happyrisk/core';
+
+export const USERS_KEY = ['users'] as const;
+
+type UseUsersOptions = Omit<UseQueryOptions<User[], Error>, 'queryKey' | 'queryFn'>;
+
+export function useUsers(options?: UseUsersOptions): UseQueryResult<User[], Error> {
+  return useQuery<User[], Error>({
+    queryKey: USERS_KEY,
+    queryFn: async () => {
+      const { data } = await api.get<User[]>('/users');
+      return data;
+    },
+    ...options,
+  });
+}
+
+type UseUserOptions = Omit<UseQueryOptions<User, Error>, 'queryKey' | 'queryFn'>;
+
+export function useUser(id: string, options?: UseUserOptions): UseQueryResult<User, Error> {
+  return useQuery<User, Error>({
+    queryKey: [...USERS_KEY, id],
+    queryFn: async () => {
+      const { data } = await api.get<User>(`/users/${id}`);
+      return data;
+    },
+    ...options,
+  });
+}
+
+type UseCreateUserOptions = Omit<UseMutationOptions<User, Error, UserCreate>, 'mutationFn'>;
+
+export function useCreateUser(
+  options?: UseCreateUserOptions,
+): UseMutationResult<User, Error, UserCreate> {
+  const queryClient = useQueryClient();
+
+  return useMutation<User, Error, UserCreate>({
+    mutationFn: async (payload) => {
+      const { data } = await api.post<User>('/users', payload);
+      return data;
+    },
+    ...options,
+    onSuccess: (...args: Parameters<NonNullable<UseCreateUserOptions['onSuccess']>>) => {
+      queryClient.invalidateQueries({ queryKey: USERS_KEY });
+      options?.onSuccess?.(...args);
+    },
+  });
+}
+
+type UseUpdateUserVariables = { id: string } & UserUpdate;
+type UseUpdateUserOptions = Omit<
+  UseMutationOptions<User, Error, UseUpdateUserVariables>,
+  'mutationFn'
+>;
+
+export function useUpdateUser(
+  options?: UseUpdateUserOptions,
+): UseMutationResult<User, Error, UseUpdateUserVariables> {
+  const queryClient = useQueryClient();
+
+  return useMutation<User, Error, UseUpdateUserVariables>({
+    mutationFn: async ({ id, ...payload }) => {
+      const { data } = await api.patch<User>(`/users/${id}`, payload);
+      return data;
+    },
+    ...options,
+    onSuccess: (...args: Parameters<NonNullable<UseUpdateUserOptions['onSuccess']>>) => {
+      queryClient.invalidateQueries({ queryKey: USERS_KEY });
+      options?.onSuccess?.(...args);
+    },
+  });
+}
+
+type UseDeactivateUserOptions = Omit<UseMutationOptions<User, Error, string>, 'mutationFn'>;
+
+export function useDeactivateUser(
+  options?: UseDeactivateUserOptions,
+): UseMutationResult<User, Error, string> {
+  const queryClient = useQueryClient();
+
+  return useMutation<User, Error, string>({
+    mutationFn: async (id) => {
+      const { data } = await api.patch<User>(`/users/${id}/deactivate`);
+      return data;
+    },
+    ...options,
+    onSuccess: (...args: Parameters<NonNullable<UseDeactivateUserOptions['onSuccess']>>) => {
+      queryClient.invalidateQueries({ queryKey: USERS_KEY });
+      options?.onSuccess?.(...args);
+    },
+  });
+}

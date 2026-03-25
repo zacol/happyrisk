@@ -20,11 +20,13 @@ Authentication is completely handled by the NestJS backend using `@nestjs/passpo
 - **Flow:**
   1.  **Initiation:** The user clicks "Login with Google" on the Next.js frontend, which redirects the browser to the NestJS endpoint (e.g., `GET /api/auth/google`).
   2.  **OAuth Handshake:** NestJS redirects the user to Google's consent screen. After consent, Google redirects back to the NestJS callback endpoint (e.g., `GET /api/auth/google/callback`).
-  3.  **Account Linking (US 5.1, US 5.6):** NestJS receives the Google profile. It checks the database via Prisma:
+  3.  **Account Linking and Validation (US 5.1, US 5.6):** NestJS receives the Google profile. It checks the database via Prisma:
       - Does an `OAuthAccount` exist for this Google ID?
       - If not, does a `User` exist with the matching email (e.g., manually created by an Admin)?
-      - If yes, link the new `OAuthAccount` to the existing `User`. If no, create both a new `User` and `OAuthAccount`.
-  4.  **Status Check (US 5.4):** NestJS verifies if the `User.is_active` status is `true`. If `false` (deactivated), it redirects the user to the frontend with an error query parameter (e.g., `?error=AccountDeactivated`), effectively blocking the login.
+      - If no `User` exists, the login is rejected and the user is redirected to the frontend with an error query parameter (e.g., `?error=UserNotFound`).
+      - If a `User` exists but `is_active = false` (deactivated), the login is rejected and the user is redirected with an error query parameter (e.g., `?error=AccountDeactivated`).
+      - If a `User` exists and `is_active = true`, the new `OAuthAccount` is linked to the existing `User` and authentication proceeds.
+  4.  **Status Check:** The status validation is performed as part of the Account Linking step above, ensuring only active, pre-existing users can successfully complete the OAuth flow.
   5.  **JWT Generation:** NestJS generates a JWT containing the user's ID, role, and email.
   6.  **Token Delivery:** NestJS redirects the user back to the Next.js frontend, passing the JWT (e.g., via a secure, short-lived callback route in Next.js which then sets it as an `HttpOnly` cookie, or directly setting the cookie from NestJS if domains allow).
 
