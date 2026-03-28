@@ -11,8 +11,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Check for file extension at the end of the path
+  const hasFileExtension = /\.\w+$/.test(pathname);
+
   // Allow static files and Next.js internals
-  if (pathname.startsWith('/_next') || pathname.startsWith('/api') || pathname.includes('.')) {
+  if (pathname.startsWith('/_next') || pathname.startsWith('/api') || hasFileExtension) {
     return NextResponse.next();
   }
 

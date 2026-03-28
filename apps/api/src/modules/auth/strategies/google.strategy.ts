@@ -62,21 +62,17 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       });
     }
 
-    // Update user avatar from Google profile if available
+    // Update user avatar / name from Google profile if available
     const photo = profile.photos?.[0]?.value;
+    const name = !user.name ? profile.displayName || undefined : undefined;
 
-    if (photo && !user.name) {
+    if (photo || name) {
       await this.prisma.user.update({
         where: { id: user.id },
         data: {
-          image: photo,
-          name: profile.displayName || undefined,
+          ...(photo && { image: photo }),
+          ...(name && { name }),
         },
-      });
-    } else if (photo) {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { image: photo },
       });
     }
 

@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { parseDurationMs } from '../../common/utils/duration.utils';
 
 export interface TokenPayload {
   userId: string;
@@ -33,7 +34,15 @@ export class AuthService {
   }
 
   generateRefreshToken(): string {
-    return crypto.randomBytes(64).toString('hex');
+    const id = crypto.randomUUID();
+    const secret = crypto.randomBytes(64).toString('hex');
+    return `${id}.${secret}`;
+  }
+
+  private parseRefreshToken(token: string): { id: string; secret: string } {
+    const dotIndex = token.indexOf('.');
+    if (dotIndex === -1) throw new UnauthorizedException('InvalidRefreshToken');
+    return { id: token.slice(0, dotIndex), secret: token.slice(dotIndex + 1) };
   }
 
   async hashToken(token: string): Promise<string> {
@@ -41,11 +50,13 @@ export class AuthService {
   }
 
   async storeRefreshToken(userId: string, token: string): Promise<void> {
-    const hashedToken = await this.hashToken(token);
+    const { id, secret } = this.parseRefreshToken(token);
+    const hashedToken = await this.hashToken(secret);
     const expiresAt = this.calculateExpiry(this.refreshExpiresIn);
 
     await this.prisma.refreshToken.create({
       data: {
+        id,
         userId,
         hashedToken,
         expiresAt,
@@ -55,66 +66,92 @@ export class AuthService {
 
   async rotateRefreshToken(
     oldToken: string,
-    userId: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const storedTokens = await this.prisma.refreshToken.findMany({
-      where: { userId, revoked: false },
+    const { id, secret } = this.parseRefreshToken(oldToken);
+
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { id },
     });
 
-    let matchedToken: (typeof storedTokens)[0] | null = null;
-    for (const stored of storedTokens) {
-      const isMatch = await bcrypt.compare(oldToken, stored.hashedToken);
-      if (isMatch) {
-        matchedToken = stored;
-        break;
-      }
+    if (!stored) {
+      throw new UnauthorizedException('InvalidRefreshToken');
     }
 
-    if (!matchedToken) {
-      // Possible token reuse attack — revoke all tokens for this user
+    const isMatch = await bcrypt.compare(secret, stored.hashedToken);
+    if (!isMatch) {
+      throw new UnauthorizedException('InvalidRefreshToken');
+    }
+
+    if (stored.revoked) {
+      // Reuse attack: valid secret presented for already-revoked token
       await this.prisma.refreshToken.updateMany({
-        where: { userId },
+        where: { userId: stored.userId },
         data: { revoked: true },
       });
       throw new UnauthorizedException('InvalidRefreshToken');
     }
 
-    if (matchedToken.expiresAt < new Date()) {
+    if (stored.expiresAt < new Date()) {
       await this.prisma.refreshToken.update({
-        where: { id: matchedToken.id },
+        where: { id: stored.id },
         data: { revoked: true },
       });
       throw new UnauthorizedException('RefreshTokenExpired');
     }
 
-    // Revoke old token
-    await this.prisma.refreshToken.update({
-      where: { id: matchedToken.id },
-      data: { revoked: true },
+    // Atomically revoke the old token only if it is still not revoked.
+    // The conditional where clause is the single-winner gate: only one
+    // concurrent caller can update the row from revoked=false to revoked=true.
+    return await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.refreshToken.updateMany({
+        where: { id: stored.id, revoked: false },
+        data: { revoked: true },
+      });
+
+      if (count === 0) {
+        // Another concurrent request already won the race – treat as reuse attack.
+        await tx.refreshToken.updateMany({
+          where: { userId: stored.userId },
+          data: { revoked: true },
+        });
+        throw new UnauthorizedException('InvalidRefreshToken');
+      }
+
+      // Fetch user to get current role
+      const user = await tx.user.findUnique({
+        where: { id: stored.userId },
+        select: { id: true, email: true, role: true, isActive: true },
+      });
+
+      if (!user || !user.isActive) {
+        throw new UnauthorizedException('AccountDeactivated');
+      }
+
+      // Generate new tokens
+      const payload: TokenPayload = {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      };
+
+      const accessToken = this.generateAccessToken(payload);
+      const refreshToken = this.generateRefreshToken();
+
+      const { id: newId, secret: newSecret } = this.parseRefreshToken(refreshToken);
+      const hashedToken = await this.hashToken(newSecret);
+      const expiresAt = this.calculateExpiry(this.refreshExpiresIn);
+
+      await tx.refreshToken.create({
+        data: {
+          id: newId,
+          userId: stored.userId,
+          hashedToken,
+          expiresAt,
+        },
+      });
+
+      return { accessToken, refreshToken };
     });
-
-    // Fetch user to get current role
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true, role: true, isActive: true },
-    });
-
-    if (!user || !user.isActive) {
-      throw new UnauthorizedException('AccountDeactivated');
-    }
-
-    // Generate new tokens
-    const payload: TokenPayload = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-    };
-
-    const accessToken = this.generateAccessToken(payload);
-    const refreshToken = this.generateRefreshToken();
-    await this.storeRefreshToken(userId, refreshToken);
-
-    return { accessToken, refreshToken };
   }
 
   async revokeAllUserTokens(userId: string): Promise<void> {
@@ -123,43 +160,30 @@ export class AuthService {
     });
   }
 
-  async revokeRefreshTokenByValue(token: string, userId: string): Promise<void> {
-    const storedTokens = await this.prisma.refreshToken.findMany({
-      where: { userId, revoked: false },
+  async revokeRefreshTokenByValue(token: string): Promise<void> {
+    let parsed: { id: string; secret: string };
+    try {
+      parsed = this.parseRefreshToken(token);
+    } catch {
+      return;
+    }
+
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { id: parsed.id },
     });
 
-    for (const stored of storedTokens) {
-      const isMatch = await bcrypt.compare(token, stored.hashedToken);
-      if (isMatch) {
-        await this.prisma.refreshToken.update({
-          where: { id: stored.id },
-          data: { revoked: true },
-        });
-        return;
-      }
+    if (!stored || stored.revoked) return;
+
+    const isMatch = await bcrypt.compare(parsed.secret, stored.hashedToken);
+    if (isMatch) {
+      await this.prisma.refreshToken.update({
+        where: { id: stored.id },
+        data: { revoked: true },
+      });
     }
   }
 
   private calculateExpiry(duration: string): Date {
-    const now = new Date();
-    const match = duration.match(/^(\d+)([dhms])$/);
-    if (!match) {
-      // Default to 7 days
-      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    }
-
-    const value = parseInt(match[1], 10);
-    switch (match[2]) {
-      case 'd':
-        return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
-      case 'h':
-        return new Date(now.getTime() + value * 60 * 60 * 1000);
-      case 'm':
-        return new Date(now.getTime() + value * 60 * 1000);
-      case 's':
-        return new Date(now.getTime() + value * 1000);
-      default:
-        return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    }
+    return new Date(Date.now() + parseDurationMs(duration));
   }
 }

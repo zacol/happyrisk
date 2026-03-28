@@ -9,7 +9,7 @@ export class OAuthExceptionFilter implements ExceptionFilter {
   catch(exception: UnauthorizedException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
 
     // Default to 'AuthFailed' if message is generic 'Unauthorized'
     let errorType = exception.message;

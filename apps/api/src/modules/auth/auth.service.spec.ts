@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 const mockPrismaService = {
   refreshToken: {
     create: jest.fn(),
+    findUnique: jest.fn(),
     findMany: jest.fn(),
     update: jest.fn(),
     updateMany: jest.fn(),
@@ -17,6 +18,7 @@ const mockPrismaService = {
   user: {
     findUnique: jest.fn(),
   },
+  $transaction: jest.fn(),
 };
 
 const mockJwtService = {
@@ -73,10 +75,13 @@ describe('AuthService', () => {
   });
 
   describe('generateRefreshToken', () => {
-    it('should return a hex string', () => {
+    it('should return an id.secret formatted string', () => {
       const token = service.generateRefreshToken();
       expect(typeof token).toBe('string');
-      expect(token.length).toBe(128); // 64 bytes = 128 hex chars
+      const dotIndex = token.indexOf('.');
+      expect(dotIndex).toBeGreaterThan(0);
+      const secret = token.slice(dotIndex + 1);
+      expect(secret.length).toBe(128); // 64 bytes = 128 hex chars
     });
   });
 
@@ -84,12 +89,12 @@ describe('AuthService', () => {
     it('should hash the token and store it', async () => {
       mockPrismaService.refreshToken.create.mockResolvedValue({});
 
-      await service.storeRefreshToken('user-1', 'raw-token');
+      await service.storeRefreshToken('user-1', 'test-id.test-secret');
 
       expect(mockPrismaService.refreshToken.create).toHaveBeenCalledTimes(1);
       const callArgs = mockPrismaService.refreshToken.create.mock.calls[0][0];
       expect(callArgs.data.userId).toBe('user-1');
-      expect(callArgs.data.hashedToken).not.toBe('raw-token');
+      expect(callArgs.data.hashedToken).not.toBe('test-id.test-secret');
       expect(callArgs.data.expiresAt).toBeInstanceOf(Date);
     });
   });
@@ -103,45 +108,49 @@ describe('AuthService', () => {
     };
 
     it('should revoke old token and issue new tokens', async () => {
-      const rawToken = 'valid-raw-token';
-      const hashedToken = await bcrypt.hash(rawToken, 10);
+      const secret = 'valid-secret';
+      const rawToken = `rt-1.${secret}`;
+      const hashedToken = await bcrypt.hash(secret, 10);
 
-      mockPrismaService.refreshToken.findMany.mockResolvedValue([
-        {
-          id: 'rt-1',
-          hashedToken,
-          revoked: false,
-          expiresAt: new Date(Date.now() + 1000 * 60 * 60),
-        },
-      ]);
-      mockPrismaService.refreshToken.update.mockResolvedValue({});
+      mockPrismaService.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        hashedToken,
+        revoked: false,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+      });
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => unknown) => cb(mockPrismaService),
+      );
+      mockPrismaService.refreshToken.updateMany.mockResolvedValue({ count: 1 });
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.refreshToken.create.mockResolvedValue({});
 
-      const result = await service.rotateRefreshToken(rawToken, 'user-1');
+      const result = await service.rotateRefreshToken(rawToken);
 
       expect(result.accessToken).toBe('mock-access-token');
       expect(typeof result.refreshToken).toBe('string');
-      expect(mockPrismaService.refreshToken.update).toHaveBeenCalledWith({
-        where: { id: 'rt-1' },
+      expect(mockPrismaService.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: { id: 'rt-1', revoked: false },
         data: { revoked: true },
       });
     });
 
-    it('should revoke all tokens on token reuse', async () => {
-      mockPrismaService.refreshToken.findMany.mockResolvedValue([
-        {
-          id: 'rt-1',
-          hashedToken: 'completely-different-hash',
-          revoked: false,
-          expiresAt: new Date(Date.now() + 1000 * 60 * 60),
-        },
-      ]);
+    it('should revoke all tokens on token reuse (revoked token presented)', async () => {
+      const secret = 'reused-secret';
+      const rawToken = `rt-1.${secret}`;
+      const hashedToken = await bcrypt.hash(secret, 10);
+
+      mockPrismaService.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        hashedToken,
+        revoked: true,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60),
+      });
       mockPrismaService.refreshToken.updateMany.mockResolvedValue({});
 
-      await expect(service.rotateRefreshToken('stolen-token', 'user-1')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.rotateRefreshToken(rawToken)).rejects.toThrow(UnauthorizedException);
 
       expect(mockPrismaService.refreshToken.updateMany).toHaveBeenCalledWith({
         where: { userId: 'user-1' },
@@ -150,45 +159,41 @@ describe('AuthService', () => {
     });
 
     it('should reject expired tokens', async () => {
-      const rawToken = 'expired-raw-token';
-      const hashedToken = await bcrypt.hash(rawToken, 10);
+      const secret = 'expired-secret';
+      const rawToken = `rt-1.${secret}`;
+      const hashedToken = await bcrypt.hash(secret, 10);
 
-      mockPrismaService.refreshToken.findMany.mockResolvedValue([
-        {
-          id: 'rt-1',
-          hashedToken,
-          revoked: false,
-          expiresAt: new Date(Date.now() - 1000),
-        },
-      ]);
+      mockPrismaService.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        hashedToken,
+        revoked: false,
+        expiresAt: new Date(Date.now() - 1000),
+      });
       mockPrismaService.refreshToken.update.mockResolvedValue({});
 
-      await expect(service.rotateRefreshToken(rawToken, 'user-1')).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(service.rotateRefreshToken(rawToken)).rejects.toThrow(UnauthorizedException);
     });
 
     it('should reject deactivated users', async () => {
-      const rawToken = 'valid-raw-token';
-      const hashedToken = await bcrypt.hash(rawToken, 10);
+      const secret = 'valid-secret';
+      const rawToken = `rt-1.${secret}`;
+      const hashedToken = await bcrypt.hash(secret, 10);
 
-      mockPrismaService.refreshToken.findMany.mockResolvedValue([
-        {
-          id: 'rt-1',
-          hashedToken,
-          revoked: false,
-          expiresAt: new Date(Date.now() + 1000 * 60 * 60),
-        },
-      ]);
-      mockPrismaService.refreshToken.update.mockResolvedValue({});
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        isActive: false,
+      mockPrismaService.refreshToken.findUnique.mockResolvedValue({
+        id: 'rt-1',
+        userId: 'user-1',
+        hashedToken,
+        revoked: false,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60),
       });
-
-      await expect(service.rotateRefreshToken(rawToken, 'user-1')).rejects.toThrow(
-        UnauthorizedException,
+      mockPrismaService.$transaction.mockImplementation(
+        (cb: (tx: typeof mockPrismaService) => unknown) => cb(mockPrismaService),
       );
+      mockPrismaService.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaService.user.findUnique.mockResolvedValue({ ...mockUser, isActive: false });
+
+      await expect(service.rotateRefreshToken(rawToken)).rejects.toThrow(UnauthorizedException);
     });
   });
 

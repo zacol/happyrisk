@@ -23,22 +23,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Pencil, UserX } from 'lucide-react';
 import { useDeactivateUser } from '@/hooks/useUsers';
+import { getInitials } from '@/lib/utils';
 import { EditUserDialog } from './EditUserDialog';
 
 interface UsersTableProps {
   users: User[];
-}
-
-function getInitials(name: string | null, email: string): string {
-  if (name) {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  }
-  return email[0].toUpperCase();
 }
 
 export function UsersTable({ users }: UsersTableProps) {

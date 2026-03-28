@@ -1,4 +1,5 @@
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import type { UserCreate, UserUpdate, ChangeRole } from '@happyrisk/core';
@@ -19,15 +20,23 @@ export class UsersService {
       throw new ConflictException('UserAlreadyExists');
     }
 
-    return this.prisma.user.create({
-      data: {
-        email: data.email,
-        name: data.name ?? null,
-        role: data.role ?? 'USER',
-        isActive: true,
-      },
-      select: this.userSelect,
-    });
+    try {
+      return await this.prisma.user.create({
+        data: {
+          email: data.email,
+          name: data.name ?? null,
+          role: data.role ?? 'USER',
+          isActive: true,
+        },
+        select: this.userSelect,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('UserAlreadyExists');
+      }
+
+      throw error;
+    }
   }
 
   async findAll() {
@@ -60,15 +69,33 @@ export class UsersService {
   async update(id: string, data: UserUpdate) {
     await this.findOne(id);
 
-    return this.prisma.user.update({
-      where: { id },
-      data: {
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.role !== undefined && { role: data.role }),
-        ...(data.isActive !== undefined && { isActive: data.isActive }),
-      },
-      select: this.userSelect,
-    });
+    const { isActive, ...rest } = data;
+
+    const fieldUpdates = {
+      ...(rest.name !== undefined && { name: rest.name }),
+      ...(rest.role !== undefined && { role: rest.role }),
+      ...(isActive === true && { isActive: true }),
+    };
+
+    const hasFieldUpdates = Object.keys(fieldUpdates).length > 0;
+
+    if (isActive === false) {
+      if (hasFieldUpdates) {
+        await this.prisma.user.update({ where: { id }, data: fieldUpdates });
+      }
+
+      return this.deactivate(id);
+    }
+
+    if (hasFieldUpdates) {
+      return this.prisma.user.update({
+        where: { id },
+        data: fieldUpdates,
+        select: this.userSelect,
+      });
+    }
+
+    return this.findOne(id);
   }
 
   async deactivate(id: string) {

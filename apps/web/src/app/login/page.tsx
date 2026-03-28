@@ -1,11 +1,15 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const authError = searchParams.get('error');
+
   const handleGoogleLogin = () => {
     window.location.href = `${API_BASE_URL}/auth/google`;
   };
@@ -18,6 +22,12 @@ export default function LoginPage() {
           <CardDescription>Sign in to access the dashboard</CardDescription>
         </CardHeader>
         <CardContent>
+          {authError && (
+            <p className="mb-4 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              Sign-in failed. Please contact an administrator if your account is inactive or has not
+              been provisioned yet.
+            </p>
+          )}
           <Button onClick={handleGoogleLogin} className="w-full" size="lg">
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
               <path

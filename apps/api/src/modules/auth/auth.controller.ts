@@ -17,6 +17,7 @@ import { AuthService, TokenPayload } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { OAuthExceptionFilter } from './filters/oauth-exception.filter';
+import { parseDurationMs } from '../../common/utils/duration.utils';
 
 interface RequestWithCookies extends Request {
   cookies: Record<string, string | undefined>;
@@ -26,6 +27,8 @@ interface RequestWithCookies extends Request {
 export class AuthController {
   private readonly frontendUrl: string;
   private readonly isProduction: boolean;
+  private readonly accessTokenMaxAge: number;
+  private readonly refreshTokenMaxAge: number;
 
   constructor(
     private readonly authService: AuthService,
@@ -33,6 +36,12 @@ export class AuthController {
   ) {
     this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
     this.isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+    this.accessTokenMaxAge = parseDurationMs(
+      this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
+    );
+    this.refreshTokenMaxAge = parseDurationMs(
+      this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES_IN'),
+    );
   }
 
   @Get('google')
@@ -62,29 +71,12 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: any, @Res() res: any) {
-    const typedReq = req as RequestWithCookies;
-    const oldRefreshToken = typedReq.cookies?.refresh_token;
+    const oldRefreshToken = (req as RequestWithCookies).cookies?.refresh_token;
     if (!oldRefreshToken) {
       throw new UnauthorizedException('NoRefreshToken');
     }
 
-    // Decode access token to get userId (even if expired)
-    let userId: string | undefined;
-    try {
-      const accessToken = typedReq.cookies?.access_token;
-      if (accessToken) {
-        const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
-        userId = payload.sub;
-      }
-    } catch {
-      // Access token might be missing or malformed
-    }
-
-    if (!userId) {
-      throw new UnauthorizedException('CannotIdentifyUser');
-    }
-
-    const tokens = await this.authService.rotateRefreshToken(oldRefreshToken, userId);
+    const tokens = await this.authService.rotateRefreshToken(oldRefreshToken);
 
     this.setTokenCookies(res as Response, tokens.accessToken, tokens.refreshToken);
     return res.json({ message: 'TokensRefreshed' });
@@ -93,17 +85,10 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: any, @Res() res: any) {
-    const typedReq = req as RequestWithCookies;
-    const refreshToken = typedReq.cookies?.refresh_token;
-    const accessToken = typedReq.cookies?.access_token;
+    const refreshToken = (req as RequestWithCookies).cookies?.refresh_token;
 
-    if (refreshToken && accessToken) {
-      try {
-        const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64').toString());
-        await this.authService.revokeRefreshTokenByValue(refreshToken, payload.sub);
-      } catch {
-        // Best-effort revocation
-      }
+    if (refreshToken) {
+      await this.authService.revokeRefreshTokenByValue(refreshToken);
     }
 
     const typedRes = res as Response;
@@ -123,7 +108,7 @@ export class AuthController {
       httpOnly: true,
       secure: this.isProduction,
       sameSite: 'strict',
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: this.accessTokenMaxAge,
       path: '/',
     });
 
@@ -131,7 +116,7 @@ export class AuthController {
       httpOnly: true,
       secure: this.isProduction,
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: this.refreshTokenMaxAge,
       path: '/api/auth',
     });
   }

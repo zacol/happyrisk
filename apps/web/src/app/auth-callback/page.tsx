@@ -11,7 +11,7 @@ export default function AuthCallbackPage() {
     const error = searchParams.get('error');
 
     if (error) {
-      router.replace(`/login?error=${error}`);
+      router.replace(`/login?error=${encodeURIComponent(error)}`);
       return;
     }
 
