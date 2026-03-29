@@ -186,6 +186,7 @@ export class AuthService {
     if (!stored || stored.revoked) return;
 
     const isMatch = await bcrypt.compare(parsed.secret, stored.hashedToken);
+
     if (isMatch) {
       await this.prisma.refreshToken.update({
         where: { id: stored.id },

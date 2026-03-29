@@ -22,22 +22,12 @@ const mockPrismaService = {
 };
 
 const mockJwtService = {
-  sign: jest.fn().mockReturnValue('mock-access-token'),
+  sign: jest.fn(),
 };
 
 const mockConfigService = {
-  get: jest.fn((key: string) => {
-    const config: Record<string, string> = {
-      JWT_REFRESH_EXPIRES_IN: '7d',
-    };
-    return config[key];
-  }),
-  getOrThrow: jest.fn((key: string) => {
-    const config: Record<string, string> = {
-      JWT_SECRET: 'test-secret',
-    };
-    return config[key];
-  }),
+  get: jest.fn(),
+  getOrThrow: jest.fn(),
 };
 
 const TEST_TOKEN_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
@@ -56,7 +46,20 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    jest.clearAllMocks();
+
+    jest.resetAllMocks();
+
+    mockJwtService.sign.mockReturnValue('mock-access-token');
+
+    mockConfigService.get.mockImplementation((key: string) => {
+      const config: Record<string, string> = { JWT_REFRESH_EXPIRES_IN: '7d' };
+      return config[key];
+    });
+
+    mockConfigService.getOrThrow.mockImplementation((key: string) => {
+      const config: Record<string, string> = { JWT_SECRET: 'test-secret' };
+      return config[key];
+    });
   });
 
   describe('generateAccessToken', () => {
@@ -112,9 +115,13 @@ describe('AuthService', () => {
       await service.storeRefreshToken('user-1', `${TEST_TOKEN_ID}.test-secret`);
 
       expect(mockPrismaService.refreshToken.create).toHaveBeenCalledTimes(1);
+
       const callArgs = mockPrismaService.refreshToken.create.mock.calls[0][0];
+
       expect(callArgs.data.userId).toBe('user-1');
       expect(callArgs.data.hashedToken).not.toBe(`${TEST_TOKEN_ID}.test-secret`);
+      expect(callArgs.data.hashedToken).not.toBe('test-secret');
+      expect(callArgs.data.hashedToken).not.toContain('test-secret');
       expect(callArgs.data.expiresAt).toBeInstanceOf(Date);
     });
   });

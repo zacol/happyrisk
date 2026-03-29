@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Logger,
   Post,
   Req,
   Res,
@@ -25,6 +26,7 @@ interface RequestWithCookies extends Request {
 
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
   private readonly frontendUrl: string;
   private readonly isProduction: boolean;
   private readonly accessTokenMaxAge: number;
@@ -36,6 +38,7 @@ export class AuthController {
   ) {
     this.frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
     this.isProduction = this.configService.get<string>('NODE_ENV') === 'production';
+
     this.accessTokenMaxAge = parseDurationMs(
       this.configService.getOrThrow<string>('JWT_ACCESS_EXPIRES_IN'),
     );
@@ -88,7 +91,11 @@ export class AuthController {
     const refreshToken = (req as RequestWithCookies).cookies?.refresh_token;
 
     if (refreshToken) {
-      await this.authService.revokeRefreshTokenByValue(refreshToken);
+      try {
+        await this.authService.revokeRefreshTokenByValue(refreshToken);
+      } catch (err) {
+        this.logger.warn('Failed to revoke refresh token during logout', err);
+      }
     }
 
     const typedRes = res as Response;
