@@ -12,6 +12,8 @@ export interface TokenPayload {
   role: string;
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class AuthService {
   private readonly refreshExpiresIn: string;
@@ -41,8 +43,17 @@ export class AuthService {
 
   private parseRefreshToken(token: string): { id: string; secret: string } {
     const dotIndex = token.indexOf('.');
+
     if (dotIndex === -1) throw new UnauthorizedException('InvalidRefreshToken');
-    return { id: token.slice(0, dotIndex), secret: token.slice(dotIndex + 1) };
+
+    const id = token.slice(0, dotIndex);
+    const secret = token.slice(dotIndex + 1);
+
+    if (!UUID_REGEX.test(id) || secret.length === 0) {
+      throw new UnauthorizedException('InvalidRefreshToken');
+    }
+
+    return { id, secret };
   }
 
   async hashToken(token: string): Promise<string> {

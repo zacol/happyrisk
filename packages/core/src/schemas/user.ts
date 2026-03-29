@@ -14,7 +14,6 @@ export const userCreateSchema = z.object({
 export const userUpdateSchema = z.object({
   name: z.string().max(255).nullish(),
   role: userRoleSchema.optional(),
-  isActive: z.boolean().optional(),
 });
 
 export const changeRoleSchema = z.object({

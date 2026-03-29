@@ -8,6 +8,7 @@ export const PrismaService = jest.fn().mockImplementation(() => ({
   oAuthAccount: {
     findUnique: jest.fn(),
     create: jest.fn(),
+    upsert: jest.fn(),
   },
   refreshToken: {
     create: jest.fn(),

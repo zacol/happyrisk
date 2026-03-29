@@ -92,8 +92,21 @@ export class AuthController {
     }
 
     const typedRes = res as Response;
-    typedRes.clearCookie('access_token', { path: '/' });
-    typedRes.clearCookie('refresh_token', { path: '/api/auth' });
+
+    typedRes.clearCookie('access_token', {
+      httpOnly: true,
+      secure: this.isProduction,
+      sameSite: 'strict',
+      path: '/',
+    });
+
+    typedRes.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: this.isProduction,
+      sameSite: 'strict',
+      path: '/api/auth',
+    });
+
     return typedRes.json({ message: 'LoggedOut' });
   }
 

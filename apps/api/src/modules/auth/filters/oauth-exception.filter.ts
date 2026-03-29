@@ -11,13 +11,9 @@ export class OAuthExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
 
-    // Default to 'AuthFailed' if message is generic 'Unauthorized'
-    let errorType = exception.message;
+    // Log specific error for debugging, but return generic message to prevent enumeration
+    console.error('OAuth authentication failed:', exception.message);
 
-    if (errorType === 'Unauthorized') {
-      errorType = 'AuthFailed';
-    }
-
-    response.redirect(`${frontendUrl}/auth-callback?error=${errorType}`);
+    response.redirect(`${frontendUrl}/auth-callback?error=AuthFailed`);
   }
 }

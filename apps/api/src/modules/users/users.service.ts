@@ -69,25 +69,12 @@ export class UsersService {
   async update(id: string, data: UserUpdate) {
     await this.findOne(id);
 
-    const { isActive, ...rest } = data;
-
     const fieldUpdates = {
-      ...(rest.name !== undefined && { name: rest.name }),
-      ...(rest.role !== undefined && { role: rest.role }),
-      ...(isActive === true && { isActive: true }),
+      ...(data.name !== undefined && { name: data.name }),
+      ...(data.role !== undefined && { role: data.role }),
     };
 
-    const hasFieldUpdates = Object.keys(fieldUpdates).length > 0;
-
-    if (isActive === false) {
-      if (hasFieldUpdates) {
-        await this.prisma.user.update({ where: { id }, data: fieldUpdates });
-      }
-
-      return this.deactivate(id);
-    }
-
-    if (hasFieldUpdates) {
+    if (Object.keys(fieldUpdates).length > 0) {
       return this.prisma.user.update({
         where: { id },
         data: fieldUpdates,

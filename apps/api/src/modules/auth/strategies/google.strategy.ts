@@ -29,36 +29,65 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       return done(new UnauthorizedException('NoEmailProvided'), undefined);
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: { id: true, email: true, name: true, role: true, isActive: true },
-    });
-
-    if (!user) {
-      return done(new UnauthorizedException('UserNotFound'), undefined);
-    }
-
-    if (!user.isActive) {
-      return done(new UnauthorizedException('AccountDeactivated'), undefined);
-    }
-
-    // Link OAuthAccount if not already linked
-    const existingOAuth = await this.prisma.oAuthAccount.findUnique({
+    const oauthAccount = await this.prisma.oAuthAccount.findUnique({
       where: {
         provider_providerAccountId: {
           provider: 'google',
           providerAccountId: profile.id,
         },
       },
+      include: {
+        user: { select: { id: true, email: true, name: true, role: true, isActive: true } },
+      },
     });
 
-    if (!existingOAuth) {
-      await this.prisma.oAuthAccount.create({
-        data: {
+    let user: {
+      id: string;
+      email: string;
+      name: string | null;
+      role: string;
+      isActive: boolean;
+    } | null;
+
+    if (oauthAccount) {
+      // Path A: returning user — identity resolved by stable providerAccountId
+      user = oauthAccount.user;
+
+      if (!user) {
+        return done(new UnauthorizedException('UserNotFound'), undefined);
+      }
+
+      if (!user.isActive) {
+        return done(new UnauthorizedException('AccountDeactivated'), undefined);
+      }
+    } else {
+      // Path B: first Google login — resolve by email and create the link
+      user = await this.prisma.user.findUnique({
+        where: { email },
+        select: { id: true, email: true, name: true, role: true, isActive: true },
+      });
+
+      if (!user) {
+        return done(new UnauthorizedException('UserNotFound'), undefined);
+      }
+
+      if (!user.isActive) {
+        return done(new UnauthorizedException('AccountDeactivated'), undefined);
+      }
+
+      await this.prisma.oAuthAccount.upsert({
+        where: {
+          provider_providerAccountId: {
+            provider: 'google',
+            providerAccountId: profile.id,
+          },
+        },
+        create: {
           userId: user.id,
           provider: 'google',
           providerAccountId: profile.id,
         },
+        update: {},
       });
     }
 
