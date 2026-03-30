@@ -24,7 +24,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    this.refreshExpiresIn = this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+    this.refreshExpiresIn = this.configService.getOrThrow<string>('JWT_REFRESH_EXPIRES_IN');
   }
 
   generateAccessToken(payload: TokenPayload): string {
@@ -113,19 +113,14 @@ export class AuthService {
     // Atomically revoke the old token only if it is still not revoked.
     // The conditional where clause is the single-winner gate: only one
     // concurrent caller can update the row from revoked=false to revoked=true.
-    return await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.refreshToken.updateMany({
         where: { id: stored.id, revoked: false },
         data: { revoked: true },
       });
 
       if (count === 0) {
-        // Another concurrent request already won the race – treat as reuse attack.
-        await tx.refreshToken.updateMany({
-          where: { userId: stored.userId },
-          data: { revoked: true },
-        });
-        throw new UnauthorizedException('InvalidRefreshToken');
+        return { reused: true as const };
       }
 
       // Fetch user to get current role
@@ -161,8 +156,19 @@ export class AuthService {
         },
       });
 
-      return { accessToken, refreshToken };
+      return { reused: false as const, accessToken, refreshToken };
     });
+
+    if (result.reused) {
+      await this.revokeAllUserTokens(stored.userId);
+
+      throw new UnauthorizedException('InvalidRefreshToken');
+    }
+
+    return {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    };
   }
 
   async revokeAllUserTokens(userId: string): Promise<void> {

@@ -17,8 +17,9 @@ import { OAuthExceptionFilter } from './filters/oauth-exception.filter';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: (configService.get<string>('JWT_ACCESS_EXPIRES_IN') ||
-            '15m') as `${number}${'s' | 'm' | 'h' | 'd'}`,
+          expiresIn: configService.getOrThrow<string>(
+            'JWT_ACCESS_EXPIRES_IN',
+          ) as `${number}${'s' | 'm' | 'h' | 'd'}`,
         },
       }),
     }),

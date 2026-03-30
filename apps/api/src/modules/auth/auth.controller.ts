@@ -75,14 +75,26 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: any, @Res() res: any) {
     const oldRefreshToken = (req as RequestWithCookies).cookies?.refresh_token;
+
     if (!oldRefreshToken) {
       throw new UnauthorizedException('NoRefreshToken');
     }
 
-    const tokens = await this.authService.rotateRefreshToken(oldRefreshToken);
+    const typedRes = res as Response;
 
-    this.setTokenCookies(res as Response, tokens.accessToken, tokens.refreshToken);
-    return res.json({ message: 'TokensRefreshed' });
+    try {
+      const tokens = await this.authService.rotateRefreshToken(oldRefreshToken);
+
+      this.setTokenCookies(typedRes, tokens.accessToken, tokens.refreshToken);
+
+      return typedRes.json({ message: 'TokensRefreshed' });
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        this.clearTokenCookies(typedRes);
+      }
+
+      throw error;
+    }
   }
 
   @Post('logout')
@@ -100,19 +112,7 @@ export class AuthController {
 
     const typedRes = res as Response;
 
-    typedRes.clearCookie('access_token', {
-      httpOnly: true,
-      secure: this.isProduction,
-      sameSite: 'strict',
-      path: '/',
-    });
-
-    typedRes.clearCookie('refresh_token', {
-      httpOnly: true,
-      secure: this.isProduction,
-      sameSite: 'strict',
-      path: '/api/auth',
-    });
+    this.clearTokenCookies(typedRes);
 
     return typedRes.json({ message: 'LoggedOut' });
   }
@@ -121,6 +121,22 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: any) {
     return user;
+  }
+
+  private clearTokenCookies(res: Response): void {
+    res.clearCookie('access_token', {
+      httpOnly: true,
+      secure: this.isProduction,
+      sameSite: 'strict',
+      path: '/',
+    });
+
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: this.isProduction,
+      sameSite: 'strict',
+      path: '/api/auth',
+    });
   }
 
   private setTokenCookies(res: Response, accessToken: string, refreshToken: string): void {
