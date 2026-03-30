@@ -63,12 +63,20 @@ export class AuthController {
       return res.redirect(`${this.frontendUrl}/auth-callback?error=AuthFailed`);
     }
 
-    const accessToken = this.authService.generateAccessToken(user);
-    const refreshToken = this.authService.generateRefreshToken();
-    await this.authService.storeRefreshToken(user.userId, refreshToken);
+    try {
+      const accessToken = this.authService.generateAccessToken(user);
+      const refreshToken = this.authService.generateRefreshToken();
 
-    this.setTokenCookies(res, accessToken, refreshToken);
-    return res.redirect(`${this.frontendUrl}/auth-callback?auth=success`);
+      await this.authService.storeRefreshToken(user.userId, refreshToken);
+
+      this.setTokenCookies(res, accessToken, refreshToken);
+
+      return res.redirect(`${this.frontendUrl}/auth-callback?auth=success`);
+    } catch (error) {
+      this.logger.error('Failed to process Google callback', error);
+
+      return res.redirect(`${this.frontendUrl}/auth-callback?error=AuthFailed`);
+    }
   }
 
   @Post('refresh')
