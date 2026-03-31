@@ -2,6 +2,9 @@ packages:
   - 'apps/*'
   - 'packages/*'
 
+catalog:
+  eslint: ^9.18.0
+
 onlyBuiltDependencies:
   - prisma
   - '@prisma/client'
