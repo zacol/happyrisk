@@ -143,7 +143,7 @@ export class AuthController {
       httpOnly: true,
       secure: this.isProduction,
       sameSite: 'strict',
-      path: '/api/auth',
+      path: '/',
     });
   }
 
@@ -161,7 +161,7 @@ export class AuthController {
       secure: this.isProduction,
       sameSite: 'strict',
       maxAge: this.refreshTokenMaxAge,
-      path: '/api/auth',
+      path: '/',
     });
   }
 }
