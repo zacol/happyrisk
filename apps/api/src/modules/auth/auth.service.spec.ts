@@ -116,7 +116,10 @@ describe('AuthService', () => {
 
       expect(mockPrismaService.refreshToken.create).toHaveBeenCalledTimes(1);
 
-      const callArgs = mockPrismaService.refreshToken.create.mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const callArgs = mockPrismaService.refreshToken.create.mock.calls[0][0] as {
+        data: { userId: string; hashedToken: string; expiresAt: Date };
+      };
 
       expect(callArgs.data.userId).toBe('user-1');
       expect(callArgs.data.hashedToken).not.toBe(`${TEST_TOKEN_ID}.test-secret`);

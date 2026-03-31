@@ -61,6 +61,7 @@ describe('UsersService', () => {
       expect(result).toEqual(mockUser);
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({
             email: 'test@example.com',
             name: 'Test User',
@@ -87,6 +88,7 @@ describe('UsersService', () => {
 
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({ role: 'USER' }),
         }),
       );
@@ -103,6 +105,7 @@ describe('UsersService', () => {
 
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({ role: 'ADMIN' }),
         }),
       );
