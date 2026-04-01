@@ -1,8 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+
+import { AuthService } from '@/modules/auth/auth.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+
 import { UsersService } from './users.service';
-import { AuthService } from '../auth/auth.service';
-import { PrismaService } from '../prisma/prisma.service';
 
 const mockUser = {
   id: 'user-1',

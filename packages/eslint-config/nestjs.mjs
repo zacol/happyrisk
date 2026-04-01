@@ -1,14 +1,14 @@
 // @ts-check
+import { defineConfig } from 'eslint/config';
 import globals from 'globals';
-import tseslint from 'typescript-eslint';
 import { baseConfig } from './base.mjs';
 
 /**
  * @param {{ tsconfigRootDir: string }} options
- * @returns {import('typescript-eslint').ConfigArray}
+ * @returns {import('eslint').Linter.Config[]}
  */
 export function nestjsConfig({ tsconfigRootDir }) {
-  return tseslint.config(
+  return defineConfig(
     ...baseConfig({ tsconfigRootDir }),
     {
       languageOptions: {

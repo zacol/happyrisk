@@ -1,17 +1,19 @@
 'use client';
 
+import type { User } from '@happyrisk/core';
+import type { UserCreate, UserUpdate } from '@happyrisk/core';
+
 import {
-  useQuery,
   useMutation,
+  type UseMutationOptions,
+  type UseMutationResult,
+  useQuery,
   useQueryClient,
   type UseQueryOptions,
   type UseQueryResult,
-  type UseMutationOptions,
-  type UseMutationResult,
 } from '@tanstack/react-query';
+
 import { api } from '@/lib/api';
-import type { User } from '@happyrisk/core';
-import type { UserCreate, UserUpdate } from '@happyrisk/core';
 
 export const USERS_KEY = ['users'] as const;
 
@@ -55,7 +57,7 @@ export function useCreateUser(
     },
     ...options,
     onSuccess: (...args: Parameters<NonNullable<UseCreateUserOptions['onSuccess']>>) => {
-      queryClient.invalidateQueries({ queryKey: USERS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USERS_KEY });
       options?.onSuccess?.(...args);
     },
   });
@@ -79,7 +81,7 @@ export function useUpdateUser(
     },
     ...options,
     onSuccess: (...args: Parameters<NonNullable<UseUpdateUserOptions['onSuccess']>>) => {
-      queryClient.invalidateQueries({ queryKey: USERS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USERS_KEY });
       options?.onSuccess?.(...args);
     },
   });
@@ -99,7 +101,7 @@ export function useDeactivateUser(
     },
     ...options,
     onSuccess: (...args: Parameters<NonNullable<UseDeactivateUserOptions['onSuccess']>>) => {
-      queryClient.invalidateQueries({ queryKey: USERS_KEY });
+      void queryClient.invalidateQueries({ queryKey: USERS_KEY });
       options?.onSuccess?.(...args);
     },
   });

@@ -1,10 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+
+import { PrismaService } from '@/modules/prisma/prisma.service';
+
 import { AuthService } from './auth.service';
-import { PrismaService } from '../prisma/prisma.service';
 
 const mockPrismaService = {
   refreshToken: {

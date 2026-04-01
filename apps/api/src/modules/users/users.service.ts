@@ -1,8 +1,10 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
-import { Prisma } from '../../generated/prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
-import { AuthService } from '../auth/auth.service';
-import type { UserCreate, UserUpdate, ChangeRole } from '@happyrisk/core';
+import type { ChangeRole, UserCreate, UserUpdate } from '@happyrisk/core';
+
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+
+import { Prisma } from '@/generated/prisma/client';
+import { AuthService } from '@/modules/auth/auth.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
 @Injectable()
 export class UsersService {

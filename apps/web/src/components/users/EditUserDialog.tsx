@@ -1,11 +1,14 @@
 'use client';
 
+import type { User, UserUpdate } from '@happyrisk/core';
+import { userUpdateSchema } from '@happyrisk/core';
+
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { userUpdateSchema } from '@happyrisk/core';
-import type { User, UserUpdate } from '@happyrisk/core';
 import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -50,7 +52,6 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
       reset({
         name: user.name ?? '',
         role: user.role,
-        isActive: user.isActive,
       });
     }
   }, [user, reset]);
@@ -78,7 +79,12 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
             Update details for {user.email}. Email cannot be changed.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(onSubmit)(e);
+          }}
+          className="grid gap-4 py-4"
+        >
           <div className="grid gap-2">
             <Label>Email</Label>
             <Input value={user.email} disabled />

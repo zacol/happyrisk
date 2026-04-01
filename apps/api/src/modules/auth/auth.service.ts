@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { PrismaService } from '../prisma/prisma.service';
-import { parseDurationMs } from '../../common/utils/duration.utils';
+
+import { parseDurationMs } from '@/common/utils/duration.utils';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
 export interface TokenPayload {
   userId: string;

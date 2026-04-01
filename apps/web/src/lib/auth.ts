@@ -1,5 +1,6 @@
-import { api } from './api';
 import type { JwtPayload } from '@happyrisk/core';
+
+import { api } from './api';
 
 export async function fetchCurrentUser(): Promise<JwtPayload> {
   const { data } = await api.get<JwtPayload>('/auth/me');

@@ -1,9 +1,11 @@
 'use client';
 
+import type { JwtPayload } from '@happyrisk/core';
+
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
+
 import { fetchCurrentUser, logout } from '@/lib/auth';
-import type { JwtPayload } from '@happyrisk/core';
 
 const AUTH_KEY = ['auth', 'me'] as const;
 

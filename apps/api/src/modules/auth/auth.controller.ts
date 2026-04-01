@@ -1,24 +1,26 @@
 import {
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Logger,
   Post,
   Req,
   Res,
-  UseGuards,
   UnauthorizedException,
-  HttpCode,
-  HttpStatus,
   UseFilters,
+  UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
+import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
+
+import { parseDurationMs } from '@/common/utils/duration.utils';
+
 import { AuthService, type TokenPayload } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { OAuthExceptionFilter } from './filters/oauth-exception.filter';
-import { parseDurationMs } from '../../common/utils/duration.utils';
+import { JwtAuthGuard } from './guards/jwt.guard';
 
 interface RequestWithCookies extends Request {
   cookies: Record<string, string | undefined>;

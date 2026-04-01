@@ -1,10 +1,11 @@
 'use client';
 
+import { LogOut, Users } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, LogOut } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Home() {
   const { user, isLoading, logout } = useAuth();
@@ -25,7 +26,12 @@ export default function Home() {
           <p className="text-muted-foreground">{user ? `Welcome, ${user.email}` : 'Dashboard'}</p>
         </div>
         {user && (
-          <Button variant="outline" onClick={logout}>
+          <Button
+            variant="outline"
+            onClick={() => {
+              void logout();
+            }}
+          >
             <LogOut className="mr-2 h-4 w-4" />
             Sign out
           </Button>

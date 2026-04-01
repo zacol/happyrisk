@@ -1,8 +1,21 @@
 'use client';
 
-import { useState } from 'react';
 import type { User } from '@happyrisk/core';
+
+import { MoreHorizontal, Pencil, UserX } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -11,19 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Pencil, UserX } from 'lucide-react';
 import { useDeactivateUser } from '@/hooks/useUsers';
 import { getInitials } from '@/lib/utils';
+
 import { EditUserDialog } from './EditUserDialog';
 
 interface UsersTableProps {
@@ -111,7 +114,9 @@ export function UsersTable({ users }: UsersTableProps) {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           variant="destructive"
-                          onClick={() => handleDeactivate(user)}
+                          onClick={() => {
+                            void handleDeactivate(user);
+                          }}
                           disabled={!user.isActive}
                         >
                           <UserX className="mr-2 h-4 w-4" />

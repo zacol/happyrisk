@@ -1,11 +1,15 @@
 'use client';
 
+import type { UserCreate } from '@happyrisk/core';
+import { userCreateSchema } from '@happyrisk/core';
+
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
-import { userCreateSchema } from '@happyrisk/core';
-import type { UserCreate } from '@happyrisk/core';
 import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +19,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -26,7 +29,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useCreateUser } from '@/hooks/useUsers';
-import { Plus } from 'lucide-react';
 
 export function CreateUserDialog() {
   const [open, setOpen] = useState(false);
@@ -77,7 +79,12 @@ export function CreateUserDialog() {
             specified email.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(onSubmit)(e);
+          }}
+          className="grid gap-4 py-4"
+        >
           <div className="grid gap-2">
             <Label htmlFor="email">Email *</Label>
             <Input id="email" type="email" placeholder="user@example.com" {...register('email')} />
