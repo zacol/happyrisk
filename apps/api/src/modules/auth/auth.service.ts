@@ -39,6 +39,7 @@ export class AuthService {
   generateRefreshToken(): string {
     const id = crypto.randomUUID();
     const secret = crypto.randomBytes(64).toString('hex');
+
     return `${id}.${secret}`;
   }
 
@@ -90,6 +91,7 @@ export class AuthService {
     }
 
     const isMatch = await bcrypt.compare(secret, stored.hashedToken);
+
     if (!isMatch) {
       throw new UnauthorizedException('InvalidRefreshToken');
     }
@@ -100,6 +102,7 @@ export class AuthService {
         where: { userId: stored.userId },
         data: { revoked: true },
       });
+
       throw new UnauthorizedException('InvalidRefreshToken');
     }
 
@@ -108,6 +111,7 @@ export class AuthService {
         where: { id: stored.id },
         data: { revoked: true },
       });
+
       throw new UnauthorizedException('RefreshTokenExpired');
     }
 
@@ -180,6 +184,7 @@ export class AuthService {
 
   async revokeRefreshTokenByValue(token: string): Promise<void> {
     let parsed: { id: string; secret: string };
+
     try {
       parsed = this.parseRefreshToken(token);
     } catch {

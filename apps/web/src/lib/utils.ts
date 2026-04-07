@@ -15,5 +15,6 @@ export function getInitials(name: string | null, email: string): string {
       .toUpperCase()
       .slice(0, 2);
   }
+
   return email[0].toUpperCase();
 }

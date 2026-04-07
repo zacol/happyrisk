@@ -55,11 +55,13 @@ describe('AuthService', () => {
 
     mockConfigService.get.mockImplementation((key: string) => {
       const config: Record<string, string> = { JWT_REFRESH_EXPIRES_IN: '7d' };
+
       return config[key];
     });
 
     mockConfigService.getOrThrow.mockImplementation((key: string) => {
       const config: Record<string, string> = { JWT_SECRET: 'test-secret' };
+
       return config[key];
     });
   });
@@ -84,10 +86,13 @@ describe('AuthService', () => {
   describe('generateRefreshToken', () => {
     it('should return an id.secret formatted string', () => {
       const token = service.generateRefreshToken();
+
       expect(typeof token).toBe('string');
       const dotIndex = token.indexOf('.');
+
       expect(dotIndex).toBeGreaterThan(0);
       const secret = token.slice(dotIndex + 1);
+
       expect(secret.length).toBe(128); // 64 bytes = 128 hex chars
     });
   });

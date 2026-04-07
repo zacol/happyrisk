@@ -56,12 +56,15 @@ api.interceptors.response.use(
       try {
         await api.post('/auth/refresh');
         processQueue(null);
+
         return api(originalRequest);
       } catch (refreshError: unknown) {
         processQueue(refreshError);
+
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
+
         return Promise.reject(
           refreshError instanceof Error ? refreshError : new Error(String(refreshError)),
         );

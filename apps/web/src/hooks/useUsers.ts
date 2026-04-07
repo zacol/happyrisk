@@ -24,6 +24,7 @@ export function useUsers(options?: UseUsersOptions): UseQueryResult<User[], Erro
     queryKey: USERS_KEY,
     queryFn: async () => {
       const { data } = await api.get<User[]>('/users');
+
       return data;
     },
     ...options,
@@ -37,6 +38,7 @@ export function useUser(id: string, options?: UseUserOptions): UseQueryResult<Us
     queryKey: [...USERS_KEY, id],
     queryFn: async () => {
       const { data } = await api.get<User>(`/users/${id}`);
+
       return data;
     },
     ...options,
@@ -53,6 +55,7 @@ export function useCreateUser(
   return useMutation<User, Error, UserCreate>({
     mutationFn: async (payload) => {
       const { data } = await api.post<User>('/users', payload);
+
       return data;
     },
     ...options,
@@ -77,6 +80,7 @@ export function useUpdateUser(
   return useMutation<User, Error, UseUpdateUserVariables>({
     mutationFn: async ({ id, ...payload }) => {
       const { data } = await api.patch<User>(`/users/${id}`, payload);
+
       return data;
     },
     ...options,
@@ -97,6 +101,7 @@ export function useDeactivateUser(
   return useMutation<User, Error, string>({
     mutationFn: async (id) => {
       const { data } = await api.patch<User>(`/users/${id}/deactivate`);
+
       return data;
     },
     ...options,

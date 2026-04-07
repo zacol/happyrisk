@@ -15,4 +15,9 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 4000);
 }
-void bootstrap();
+
+void bootstrap().catch((error) => {
+  // Keep this minimal at process entrypoint; logger may not be initialized yet.
+  console.error('Failed to bootstrap application', error);
+  process.exit(1);
+});

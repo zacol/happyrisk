@@ -26,6 +26,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<void> {
     const email = profile.emails?.[0]?.value;
+
     if (!email) {
       return done(new UnauthorizedException('NoEmailProvided'), undefined);
     }

@@ -61,6 +61,7 @@ export function CreateUserDialog() {
         axiosError?.response?.data?.message === 'UserAlreadyExists'
           ? 'A user with this email already exists'
           : 'Failed to create user';
+
       toast.error(message);
     }
   };
