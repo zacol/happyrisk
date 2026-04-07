@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -12,6 +12,7 @@ export default function AuthCallbackPage() {
 
     if (error) {
       router.replace(`/login?error=${encodeURIComponent(error)}`);
+
       return;
     }
 
@@ -26,5 +27,19 @@ export default function AuthCallbackPage() {
         <p className="mt-4 text-muted-foreground">Signing in...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
+        </div>
+      }
+    >
+      <AuthCallbackContent />
+    </Suspense>
   );
 }

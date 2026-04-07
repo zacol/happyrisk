@@ -1,8 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, VerifyCallback, Profile } from 'passport-google-oauth20';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Profile, Strategy, VerifyCallback } from 'passport-google-oauth20';
+
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -25,6 +26,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ): Promise<void> {
     const email = profile.emails?.[0]?.value;
+
     if (!email) {
       return done(new UnauthorizedException('NoEmailProvided'), undefined);
     }

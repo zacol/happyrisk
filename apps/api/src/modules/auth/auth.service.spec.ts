@@ -1,10 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+
+import { PrismaService } from '@/modules/prisma/prisma.service';
+
 import { AuthService } from './auth.service';
-import { PrismaService } from '../prisma/prisma.service';
 
 const mockPrismaService = {
   refreshToken: {
@@ -53,11 +55,13 @@ describe('AuthService', () => {
 
     mockConfigService.get.mockImplementation((key: string) => {
       const config: Record<string, string> = { JWT_REFRESH_EXPIRES_IN: '7d' };
+
       return config[key];
     });
 
     mockConfigService.getOrThrow.mockImplementation((key: string) => {
       const config: Record<string, string> = { JWT_SECRET: 'test-secret' };
+
       return config[key];
     });
   });
@@ -82,10 +86,13 @@ describe('AuthService', () => {
   describe('generateRefreshToken', () => {
     it('should return an id.secret formatted string', () => {
       const token = service.generateRefreshToken();
+
       expect(typeof token).toBe('string');
       const dotIndex = token.indexOf('.');
+
       expect(dotIndex).toBeGreaterThan(0);
       const secret = token.slice(dotIndex + 1);
+
       expect(secret.length).toBe(128); // 64 bytes = 128 hex chars
     });
   });
@@ -116,7 +123,10 @@ describe('AuthService', () => {
 
       expect(mockPrismaService.refreshToken.create).toHaveBeenCalledTimes(1);
 
-      const callArgs = mockPrismaService.refreshToken.create.mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const callArgs = mockPrismaService.refreshToken.create.mock.calls[0][0] as {
+        data: { userId: string; hashedToken: string; expiresAt: Date };
+      };
 
       expect(callArgs.data.userId).toBe('user-1');
       expect(callArgs.data.hashedToken).not.toBe(`${TEST_TOKEN_ID}.test-secret`);

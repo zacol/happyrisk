@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { surveyFrequencySchema, conversationStatusSchema } from './enums';
+
+import { conversationStatusSchema, surveyFrequencySchema } from './enums';
 
 // ─────────────────────────────────────────────
 // SurveyConfig

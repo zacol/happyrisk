@@ -1,8 +1,8 @@
 'use client';
 
-import { useUsers } from '@/hooks/useUsers';
-import { UsersTable } from '@/components/users/UsersTable';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
+import { UsersTable } from '@/components/users/UsersTable';
+import { useUsers } from '@/hooks/useUsers';
 
 export default function UsersPage() {
   const { data: users, isLoading, isError } = useUsers();

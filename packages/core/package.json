@@ -32,12 +32,19 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsc -w"
+    "dev": "tsc -w",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix"
+  },
+  "engines": {
+    "node": ">=24.14.0"
   },
   "dependencies": {
     "zod": "latest"
   },
   "devDependencies": {
+    "@happyrisk/eslint-config": "workspace:*",
+    "eslint": "catalog:",
     "typescript": "latest"
   }
 }

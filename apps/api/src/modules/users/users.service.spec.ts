@@ -1,8 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+
+import { AuthService } from '@/modules/auth/auth.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
+
 import { UsersService } from './users.service';
-import { AuthService } from '../auth/auth.service';
-import { PrismaService } from '../prisma/prisma.service';
 
 const mockUser = {
   id: 'user-1',
@@ -61,6 +63,7 @@ describe('UsersService', () => {
       expect(result).toEqual(mockUser);
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({
             email: 'test@example.com',
             name: 'Test User',
@@ -87,6 +90,7 @@ describe('UsersService', () => {
 
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({ role: 'USER' }),
         }),
       );
@@ -103,6 +107,7 @@ describe('UsersService', () => {
 
       expect(mockPrismaService.user.create).toHaveBeenCalledWith(
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           data: expect.objectContaining({ role: 'ADMIN' }),
         }),
       );

@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from 'clsx';
+import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
@@ -15,5 +15,6 @@ export function getInitials(name: string | null, email: string): string {
       .toUpperCase()
       .slice(0, 2);
   }
+
   return email[0].toUpperCase();
 }

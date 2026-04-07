@@ -11,9 +11,13 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,css}\"",
     "prepare": "husky"
   },
+  "engines": {
+    "node": ">=24.14.0"
+  },
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
+    "eslint": "catalog:",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
