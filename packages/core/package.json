@@ -40,11 +40,11 @@
     "node": ">=24.14.0"
   },
   "dependencies": {
-    "zod": "latest"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@happyrisk/eslint-config": "workspace:*",
     "eslint": "catalog:",
-    "typescript": "latest"
+    "typescript": "catalog:"
   }
 }
