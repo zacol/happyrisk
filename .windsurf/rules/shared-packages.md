@@ -11,7 +11,7 @@ This package is the most critical piece of the monorepo. It holds all logic shar
 
 ### Directory Layout
 
-```
+```text
 packages/core/src/
   schemas/      # Zod schemas (validation)
   types/        # Inferred TypeScript types

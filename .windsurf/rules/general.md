@@ -65,7 +65,7 @@ Run `pnpm format` from the root to format all files. The CI pipeline enforces th
 
 All commits must follow **Conventional Commits** (enforced by commitlint + husky):
 
-```
+```text
 <type>(<scope>): <description>
 ```
 

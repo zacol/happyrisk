@@ -92,7 +92,7 @@ Set all auth cookies with:
   httpOnly: true,
   secure: isProduction,   // false in development, true in production
   sameSite: 'strict',
-  path: '/',              // or '/api/auth/refresh' for the refresh token
+  path: '/',
   maxAge: <milliseconds>,
 }
 ```

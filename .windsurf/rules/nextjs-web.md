@@ -7,7 +7,7 @@ globs: apps/web/**
 
 ## ⚠️ Read First — This Is Not the Next.js You Know
 
-This project uses **Next.js 16** with **React 19**. APIs, conventions, and file structure may differ from your training data. Before writing any Next.js-specific code, check `node_modules/next/dist/docs/` for the authoritative reference. Reed all deprecation notices.
+This project uses **Next.js 16** with **React 19**. APIs, conventions, and file structure may differ from your training data. Before writing any Next.js-specific code, check `node_modules/next/dist/docs/` for the authoritative reference. Read all deprecation notices.
 
 ## App Router
 
