@@ -51,7 +51,7 @@ This project uses **Next.js 16** with **React 19**. APIs, conventions, and file 
 - The `proxy.ts` middleware handles silent token rotation (access token expired → refresh → retry). No auth logic belongs inside page components.
 - Protected routes are defined by the `matcher` in `proxy.ts`. All new protected routes must fall under the matcher pattern.
 - To read the current user, call `GET /api/auth/me`. Do not decode or verify JWTs on the frontend for security decisions — only for UX (e.g., role-based rendering).
-- For route protection logic, check `middleware.ts` / `proxy.ts` — not inside layouts or pages.
+- For route protection logic, check `proxy.ts` — not inside layouts or pages.
 
 ## API Communication
 
