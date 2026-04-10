@@ -43,7 +43,7 @@ To maintain high security (especially against XSS and CSRF) while providing a go
     - **Storage:** Returned to the frontend and stored in memory, or sent via a secure `HttpOnly` cookie. Used to authenticate standard API requests.
 2.  **Refresh Token (Opaque String):**
     - **Lifespan:** Long (e.g., 7 days).
-    - **Storage:** Handled strictly via an `HttpOnly`, `Secure`, `SameSite=Strict` cookie bound to the `/api/auth/refresh` endpoint. It is never exposed to frontend JavaScript.
+    - **Storage:** Handled strictly via an `HttpOnly`, `Secure`, `SameSite=Strict` cookie. It is never exposed to frontend JavaScript.
     - **Database:** A hashed version of the refresh token is stored in the `RefreshToken` table linked to the user's device/session.
 
 ### Rotation Flow
