@@ -47,13 +47,15 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   });
 
   useEffect(() => {
+    if (!open) return;
+
     if (user) {
       reset({
         name: user.name ?? '',
         role: user.role,
       });
     }
-  }, [user, reset]);
+  }, [open, user, reset]);
 
   const onSubmit = async (data: UserUpdate) => {
     if (!user) return;

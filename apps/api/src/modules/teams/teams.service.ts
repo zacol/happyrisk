@@ -36,23 +36,21 @@ export class TeamsService {
   }
 
   async update(id: string, data: TeamUpdate) {
-    await this.findOne(id);
-
-    return this.prisma.team.update({
+    await this.prisma.team.updateMany({
       where: { id },
       data: { name: data.name },
-      select: this.teamSelect,
     });
+
+    return this.findOne(id);
   }
 
   async archive(id: string) {
-    await this.findOne(id);
-
-    return this.prisma.team.update({
+    await this.prisma.team.updateMany({
       where: { id },
       data: { isActive: false },
-      select: this.teamSelect,
     });
+
+    return this.findOne(id);
   }
 
   private readonly teamSelect = {

@@ -48,7 +48,14 @@ export function CreateTeamDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+
+        if (!nextOpen) reset();
+      }}
+    >
       <DialogTrigger render={<Button />}>
         <Plus className="mr-2 h-4 w-4" />
         Create Team

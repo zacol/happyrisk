@@ -27,6 +27,7 @@ interface RenameTeamDialogProps {
 }
 
 export function RenameTeamDialog({ team, open, onOpenChange }: RenameTeamDialogProps) {
+  console.log('team', team);
   const updateTeam = useUpdateTeam();
 
   const {
@@ -40,10 +41,12 @@ export function RenameTeamDialog({ team, open, onOpenChange }: RenameTeamDialogP
   });
 
   useEffect(() => {
+    if (!open) return;
+
     if (team) {
       reset({ name: team.name });
     }
-  }, [team, reset]);
+  }, [open, team, reset]);
 
   const onSubmit = async (data: TeamUpdate) => {
     if (!team) return;
