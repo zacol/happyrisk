@@ -1,7 +1,6 @@
 'use client';
 
-import type { UserCreate } from '@happyrisk/core';
-import { userCreateSchema } from '@happyrisk/core';
+import { type UserCreate, userCreateSchema } from '@happyrisk/core';
 
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { Plus } from 'lucide-react';

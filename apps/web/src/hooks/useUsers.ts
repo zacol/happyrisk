@@ -1,7 +1,6 @@
 'use client';
 
-import type { User } from '@happyrisk/core';
-import type { UserCreate, UserUpdate } from '@happyrisk/core';
+import type { User, UserCreate, UserUpdate } from '@happyrisk/core';
 
 import {
   useMutation,

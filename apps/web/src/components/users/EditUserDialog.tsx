@@ -1,7 +1,6 @@
 'use client';
 
-import type { User, UserUpdate } from '@happyrisk/core';
-import { userUpdateSchema } from '@happyrisk/core';
+import { type User, type UserUpdate, userUpdateSchema } from '@happyrisk/core';
 
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useEffect } from 'react';

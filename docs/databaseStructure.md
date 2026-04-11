@@ -41,14 +41,13 @@ User 1──* OAuthAccount
 
 A team (e.g., "Backend Squad", "Mobile QA").
 
-| Column               | Type           | Constraints               | Description                                                       |
-| :------------------- | :------------- | :------------------------ | :---------------------------------------------------------------- |
-| `id`                 | `UUID`         | PK, default `uuid()`      | Unique identifier.                                                |
-| `name`               | `VARCHAR(255)` | NOT NULL                  | Team display name.                                                |
-| `department_segment` | `VARCHAR(100)` | NULLABLE                  | Segment tag for benchmarking (e.g., "Backend", "Frontend", "QA"). |
-| `is_active`          | `BOOLEAN`      | NOT NULL, default `true`  | Whether the team is active.                                       |
-| `created_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Record creation timestamp.                                        |
-| `updated_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Last update timestamp (`@updatedAt`).                             |
+| Column       | Type           | Constraints               | Description                           |
+| :----------- | :------------- | :------------------------ | :------------------------------------ |
+| `id`         | `UUID`         | PK, default `uuid()`      | Unique identifier.                    |
+| `name`       | `VARCHAR(255)` | NOT NULL                  | Team display name.                    |
+| `is_active`  | `BOOLEAN`      | NOT NULL, default `true`  | Whether the team is active.           |
+| `created_at` | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Record creation timestamp.            |
+| `updated_at` | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Last update timestamp (`@updatedAt`). |
 
 ---
 

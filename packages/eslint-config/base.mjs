@@ -32,6 +32,8 @@ export function baseConfig({ tsconfigRootDir }) {
         'simple-import-sort': simpleImportSort,
       },
       rules: {
+        'no-duplicate-imports': 'error',
+        'no-param-reassign': ['error', { props: false }],
         '@stylistic/quotes': ['error', 'single', { avoidEscape: true }],
         '@stylistic/comma-dangle': [
           'error',
