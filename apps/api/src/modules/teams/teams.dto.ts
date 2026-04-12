@@ -1,6 +1,7 @@
-import { teamCreateSchema, teamUpdateSchema } from '@happyrisk/core';
+import { teamCreateSchema, teamMemberAddSchema, teamUpdateSchema } from '@happyrisk/core';
 
 import { createZodDto } from 'nestjs-zod';
 
 export class CreateTeamDto extends createZodDto(teamCreateSchema) {}
 export class UpdateTeamDto extends createZodDto(teamUpdateSchema) {}
+export class AddMemberDto extends createZodDto(teamMemberAddSchema) {}

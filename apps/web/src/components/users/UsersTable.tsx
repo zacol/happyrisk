@@ -2,7 +2,7 @@
 
 import type { User } from '@happyrisk/core';
 
-import { MoreHorizontal, Pencil, UserX } from 'lucide-react';
+import { MoreHorizontal, Pencil, Users, UserX } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -28,6 +28,7 @@ import { useDeactivateUser } from '@/hooks/useUsers';
 import { getInitials } from '@/lib/utils';
 
 import { EditUserDialog } from './EditUserDialog';
+import { ManageTeamsDialog } from './ManageTeamsDialog';
 
 interface UsersTableProps {
   users: User[];
@@ -36,6 +37,8 @@ interface UsersTableProps {
 export function UsersTable({ users }: UsersTableProps) {
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [manageTeamsUser, setManageTeamsUser] = useState<User | null>(null);
+  const [manageTeamsOpen, setManageTeamsOpen] = useState(false);
   const deactivateUser = useDeactivateUser();
 
   const handleDeactivate = async (user: User) => {
@@ -52,6 +55,11 @@ export function UsersTable({ users }: UsersTableProps) {
   const handleEdit = (user: User) => {
     setEditUser(user);
     setEditOpen(true);
+  };
+
+  const handleManageTeams = (user: User) => {
+    setManageTeamsUser(user);
+    setManageTeamsOpen(true);
   };
 
   return (
@@ -111,6 +119,10 @@ export function UsersTable({ users }: UsersTableProps) {
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleManageTeams(user)}>
+                          <Users className="mr-2 h-4 w-4" />
+                          Manage Teams
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           variant="destructive"
@@ -133,6 +145,11 @@ export function UsersTable({ users }: UsersTableProps) {
       </div>
 
       <EditUserDialog user={editUser} open={editOpen} onOpenChange={setEditOpen} />
+      <ManageTeamsDialog
+        user={manageTeamsUser}
+        open={manageTeamsOpen}
+        onOpenChange={setManageTeamsOpen}
+      />
     </>
   );
 }

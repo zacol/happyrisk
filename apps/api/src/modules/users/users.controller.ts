@@ -51,4 +51,9 @@ export class UsersController {
   changeRole(@Param('id', ParseUUIDPipe) id: string, @Body() body: ChangeRoleDto) {
     return this.usersService.changeRole(id, body.role);
   }
+
+  @Get(':id/memberships')
+  getMemberships(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.getMemberships(id);
+  }
 }
