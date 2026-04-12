@@ -28,7 +28,7 @@ The following variables must be added to `apps/api/.env` (and documented in `app
 
 > **Per-workspace tokens:** `SLACK_BOT_TOKEN` is **not** a global environment variable. After a workspace is connected via the OAuth flow (§4), the bot token is stored encrypted in the `SlackInstallation` table and resolved dynamically at runtime.
 
-> **Security note:** `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, and `SLACK_SIGNING_SECRET` are required at startup. If any is missing in non-development environments, the application must fail fast (`configService.getOrThrow()`).
+> **Security note:** `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, `SLACK_SIGNING_SECRET`, and `SLACK_REDIRECT_URI` are required at startup. `SLACK_REDIRECT_URI` is sent to Slack during the OAuth authorization redirect (step 4) and again to `oauth.v2.access` during token exchange (step 8) — it cannot be omitted. If any of these four variables is missing in non-development environments, the application must fail fast (`configService.getOrThrow()`).
 
 ---
 
@@ -116,12 +116,13 @@ The Slack App must request the following bot token scopes:
 
 ### Error Handling
 
-| Error                     | Handling                                                                                     |
-| :------------------------ | :------------------------------------------------------------------------------------------- |
-| Invalid/expired `state`   | Reject with `400`. Never exchange the authorization code.                                    |
-| Workspace already linked  | `SlackInstallation` is upserted (re-install). Existing `slack_user_id` values are preserved. |
-| No matching `User.email`  | Slack member is skipped silently during auto-sync; linkable manually via admin panel.        |
-| `oauth.v2.access` failure | Log error, redirect to dashboard with `?error=SlackOAuthFailed`.                             |
+| Error                                   | Handling                                                                                                                                                                                                                                                                                                                            |
+| :-------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Invalid/expired `state`                 | Reject with `400`. Never exchange the authorization code.                                                                                                                                                                                                                                                                           |
+| Workspace re-installed (same project)   | `SlackInstallation` is upserted for that project. Existing `slack_user_id` values are preserved.                                                                                                                                                                                                                                    |
+| Workspace linked to a different project | Reject with `409 Conflict`. Do **not** upsert or overwrite the existing `SlackInstallation`. Return a user-facing message: _"This Slack workspace is already connected to another project. Disconnect it there first."_ Enforced at the DB level by `UNIQUE(workspace_id)` on `SlackInstallation` (see `databaseStructure.md` §17). |
+| No matching `User.email`                | Slack member is skipped silently during auto-sync; linkable manually via admin panel.                                                                                                                                                                                                                                               |
+| `oauth.v2.access` failure               | Log error, redirect to dashboard with `?error=SlackOAuthFailed`.                                                                                                                                                                                                                                                                    |
 
 ---
 
@@ -186,8 +187,8 @@ Each project has a `SurveyConfig` record that defines:
 2. Find all active `SurveyConfig` records where the current UTC time matches `day_of_week` + `time_utc`.
 3. For each matching project, create a new `SurveyCycle` record (`status: ACTIVE`, `period_start`, `period_end`).
 4. Fetch all active `ProjectMembership` records with a non-null `slack_user_id` for the project.
-5. For each member, create a `SurveyParticipation` record (`status: PENDING`) and enqueue a `send-survey-dm` job in the BullMQ queue (see §12).
-6. Update each `SurveyParticipation.status` to `SENT` and set `sent_at`.
+5. For each member, create a `SurveyParticipation` record (`status: QUEUED`) and enqueue a `send-survey-dm` job in the BullMQ queue (see §12).
+6. The queue processor updates `SurveyParticipation.status` to `SENT` and sets `sent_at` after a successful `chat.postMessage` call (see §12).
 
 ---
 
@@ -320,15 +321,15 @@ When a manager marks a risk as `ADDRESSED` or `RESOLVED` via the dashboard and p
 
 ## 10. Block Kit Component Reference
 
-| Component              | Type            | Action / Block ID        | Description                                       |
-| :--------------------- | :-------------- | :----------------------- | :------------------------------------------------ |
-| Rating buttons         | `actions` block | `rating_1` … `rating_5`  | Initial 1–5 rating selection.                     |
-| Initial comment input  | `input` block   | `initial_comment_input`  | Optional free-text after rating.                  |
-| Comment submit button  | `actions` block | `submit_initial_comment` | Submits rating + comment, triggers AI #1.         |
-| Skip button            | `actions` block | `skip_initial_comment`   | Skips comment, proceeds directly to AI #1.        |
-| Follow-up answer input | `input` block   | `follow_up_answer_input` | Captures the answer to the AI-generated question. |
-| Follow-up submit       | `actions` block | `submit_follow_up`       | Finalizes the conversation, triggers AI #2.       |
-| Skip follow-up         | `actions` block | `skip_follow_up`         | Ends conversation as PARTIAL with only rating.    |
+| Component              | Type            | Action / Block ID        | Description                                               |
+| :--------------------- | :-------------- | :----------------------- | :-------------------------------------------------------- |
+| Rating buttons         | `actions` block | `rating_1` … `rating_5`  | Initial 1–5 rating selection.                             |
+| Initial comment input  | `input` block   | `initial_comment_input`  | Optional free-text after rating.                          |
+| Comment submit button  | `actions` block | `submit_initial_comment` | Submits rating + comment, triggers AI #1.                 |
+| Skip button            | `actions` block | `skip_initial_comment`   | Skips comment, proceeds directly to AI #1.                |
+| Follow-up answer input | `input` block   | `follow_up_answer_input` | Captures the answer to the AI-generated question.         |
+| Follow-up submit       | `actions` block | `submit_follow_up`       | Finalizes the conversation, triggers AI #2.               |
+| Skip follow-up         | `actions` block | `skip_follow_up`         | Ends conversation as PARTIAL (rating + optional comment). |
 
 All `action_id` and `block_id` constants are defined in `slack.constants.ts` to avoid magic strings across handlers.
 
@@ -352,7 +353,7 @@ All outbound Slack DMs are sent through a **BullMQ** queue backed by Redis inste
 
 ### Why a Queue
 
-- **Rate limiting** — `concurrency: 1` on the processor naturally stays within Slack's Tier 3 limit (~1 req/s per workspace) without manual `sleep()` calls.
+- **Rate limiting** — `concurrency: 1` on the processor naturally stays within Slack's Tier 3 limit (~1 req/s per workspace) without manual `sleep()` calls. **This only holds when a single BullMQ worker process is running.** In a horizontally scaled deployment (e.g., multiple Render/Railway instances each hosting a worker), every instance processes jobs concurrently and the combined throughput can exceed Slack's limits.
 - **Automatic retries** — transient failures (network errors, Slack 503) are retried with exponential backoff. Users who already received a DM are not re-messaged.
 - **Observability** — failed jobs remain in the queue and can be inspected; they are not silently lost.
 
@@ -392,6 +393,10 @@ export class SlackDmProcessor {
       channel: job.data.slackUserId,
       blocks: job.data.blocks,
     });
+    await this.prisma.surveyParticipation.update({
+      where: { id: job.data.surveyParticipationId },
+      data: { status: 'SENT', sentAt: new Date() },
+    });
   }
 
   @Process('send-feedback-dm')
@@ -415,6 +420,11 @@ export class SlackDmProcessor {
 ```
 
 > **`concurrency: 1` is intentional.** It acts as a natural rate limiter — only one DM is sent at a time, keeping the overall throughput within Slack's limits across all workspaces sharing the queue.
+>
+> ⚠️ **Single-worker assumption.** This guarantee breaks down in horizontally scaled deployments where multiple worker processes share the same Redis-backed queue. Each process independently honours its own `concurrency: 1`, but together they can exceed Slack's Tier 3 rate limit. If you scale out workers, choose one of the following:
+>
+> - **Run exactly one worker process** and scale the API tier independently (recommended for most deployments).
+> - **Add a distributed rate limiter** such as [Bottleneck](https://github.com/SGravesend/bottleneck) (with its `RedisDatastore`) or a Redis-backed token-bucket limiter, applied inside the processor before each `chat.postMessage` call.
 
 ---
 

@@ -30,7 +30,7 @@ Project 1──* ProjectMembership *──1 User
                       │
                       ├──* HappinessSnapshot (weekly aggregates)
                       │
-                      └──1 SlackInstallation
+                      └──? SlackInstallation
 
 User 1──* OAuthAccount
 ```
@@ -161,14 +161,14 @@ Represents a single survey period (e.g., "Week of 2026-03-16") for a project.
 
 Tracks **who** was invited and whether they responded — but stores **no content**. This table exists solely for calculating response rates (KPI #1: >80%).
 
-| Column            | Type          | Constraints                     | Description                                |
-| :---------------- | :------------ | :------------------------------ | :----------------------------------------- |
-| `id`              | `UUID`        | PK, default `uuid()`            | Unique identifier.                         |
-| `user_id`         | `UUID`        | FK → `User.id`, NOT NULL        | The invited team member.                   |
-| `survey_cycle_id` | `UUID`        | FK → `SurveyCycle.id`, NOT NULL | The cycle this participation belongs to.   |
-| `status`          | `ENUM`        | NOT NULL, default `PENDING`     | `PENDING`, `SENT`, `RESPONDED`, `EXPIRED`. |
-| `sent_at`         | `TIMESTAMPTZ` | NULLABLE                        | When the DM was sent.                      |
-| `responded_at`    | `TIMESTAMPTZ` | NULLABLE                        | When the user completed the interaction.   |
+| Column            | Type          | Constraints                     | Description                                          |
+| :---------------- | :------------ | :------------------------------ | :--------------------------------------------------- |
+| `id`              | `UUID`        | PK, default `uuid()`            | Unique identifier.                                   |
+| `user_id`         | `UUID`        | FK → `User.id`, NOT NULL        | The invited team member.                             |
+| `survey_cycle_id` | `UUID`        | FK → `SurveyCycle.id`, NOT NULL | The cycle this participation belongs to.             |
+| `status`          | `ENUM`        | NOT NULL, default `PENDING`     | `PENDING`, `QUEUED`, `SENT`, `RESPONDED`, `EXPIRED`. |
+| `sent_at`         | `TIMESTAMPTZ` | NULLABLE                        | When the DM was sent.                                |
+| `responded_at`    | `TIMESTAMPTZ` | NULLABLE                        | When the user completed the interaction.             |
 
 **Constraints:** UNIQUE(`user_id`, `survey_cycle_id`)
 **Indexes:** `survey_cycle_id`
@@ -386,6 +386,7 @@ enum SurveyCycleStatus {
 
 enum ParticipationStatus {
   PENDING
+  QUEUED
   SENT
   RESPONDED
   EXPIRED
