@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Users } from 'lucide-react';
+import { LogOut, Users, UsersRound } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,22 @@ export default function Home() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Manage all users in the system, assign roles, and control access.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/teams" className="block">
+          <Card className="transition-colors hover:bg-muted/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UsersRound className="h-5 w-5" />
+                Team Management
+              </CardTitle>
+              <CardDescription>Create, rename, and archive teams.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Manage all teams in the system and control their active status.
               </p>
             </CardContent>
           </Card>

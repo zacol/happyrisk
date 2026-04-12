@@ -1,7 +1,6 @@
 'use client';
 
-import type { UserCreate } from '@happyrisk/core';
-import { userCreateSchema } from '@happyrisk/core';
+import { type UserCreate, userCreateSchema } from '@happyrisk/core';
 
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { Plus } from 'lucide-react';
@@ -67,7 +66,14 @@ export function CreateUserDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+
+        if (!nextOpen) reset();
+      }}
+    >
       <DialogTrigger render={<Button />}>
         <Plus className="mr-2 h-4 w-4" />
         Create User

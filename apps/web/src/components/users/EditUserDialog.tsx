@@ -1,7 +1,6 @@
 'use client';
 
-import type { User, UserUpdate } from '@happyrisk/core';
-import { userUpdateSchema } from '@happyrisk/core';
+import { type User, type UserUpdate, userUpdateSchema } from '@happyrisk/core';
 
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useEffect } from 'react';
@@ -48,13 +47,15 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   });
 
   useEffect(() => {
+    if (!open) return;
+
     if (user) {
       reset({
         name: user.name ?? '',
         role: user.role,
       });
     }
-  }, [user, reset]);
+  }, [open, user, reset]);
 
   const onSubmit = async (data: UserUpdate) => {
     if (!user) return;
