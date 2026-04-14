@@ -1,4 +1,4 @@
-# codrabbit-fix-finding
+# coderabbit-fix-finding
 
 ## Description
 
