@@ -36,7 +36,7 @@ The following variables must be added to `apps/api/.env` (and documented in `app
 
 The Slack integration lives in `apps/api/src/modules/slack/`. It is registered as a standard NestJS module in `AppModule`.
 
-```
+```text
 src/modules/slack/
 ├── slack.module.ts                    # Registers Bolt App, InstallationStore provider, imports sub-modules
 ├── slack.service.ts                   # Bolt App instance factory, HTTP receiver setup, installationStore wiring
@@ -73,7 +73,7 @@ The Slack App must request the following bot token scopes:
 
 ### Step-by-Step Flow
 
-```
+```text
 1. Dashboard → User clicks "Connect Slack" on Project Settings.
         ↓
 2. Next.js redirects browser to NestJS:
@@ -138,7 +138,7 @@ The Slack platform identifies users by a **Slack User ID** (`U012AB3CD`). The in
 
 ### Lookup Flow (Bot receiving an event)
 
-```
+```text
 Slack Event → slack_user_id (from payload)
     ↓
 ProjectMembership.findFirst({ where: { slack_user_id, project_id } })
@@ -154,7 +154,7 @@ ProjectMembership.findFirst({ where: { slack_user_id, project_id } })
 
 After a workspace is connected (§4, step 10), `users.list` is called with the newly obtained bot token. Each workspace member is processed as follows:
 
-```
+```text
 Slack workspace member (from users.list)
     ↓ member.profile.email
 Match against User.email in DB
@@ -200,7 +200,7 @@ The entire survey interaction is a single DM thread between the bot and the team
 
 The bot sends a Block Kit message with 5 action buttons.
 
-```
+```text
 ┌────────────────────────────────────────────────┐
 │ 👋 How would you rate your week on a scale      │
 │    of 1 to 5?                                  │
@@ -212,7 +212,7 @@ The bot sends a Block Kit message with 5 action buttons.
 - Each button triggers a Bolt `action` event with a unique `action_id` (e.g., `rating_1` … `rating_5`).
 - On click, the buttons are replaced with a confirmation and a plain-text input asking for an optional initial comment:
 
-```
+```text
 ┌────────────────────────────────────────────────┐
 │ ✅ You rated your week: 3/5                     │
 │                                                │
@@ -232,7 +232,7 @@ After saving the `PARTIAL` response, the AI Follow-up Generator is called asynch
 
 **Input:**
 
-```
+```text
 Rating: {rating}/5
 Initial Comment: {initial_comment}
 ```
@@ -249,7 +249,7 @@ After the follow-up answer is received (or if the user skips):
 2. The bot sends a brief confirmation message.
 3. AI #2 (Feedback Analyzer) is triggered asynchronously — see §8.
 
-```
+```text
 Bot: Thanks for the honest feedback! 🙌 Your input (anonymous) will help us improve.
 ```
 
@@ -268,7 +268,7 @@ If a user closes Slack after Step 1 without completing the follow-up:
 
 Triggered after a `COMPLETE` conversation is saved. This runs as a background job (fire-and-forget from the Slack handler's perspective).
 
-```
+```text
 SurveyResponse (COMPLETE)
     ↓
 AI #2: Feedback Analyzer (see docs/prompts.md §2)
@@ -293,18 +293,18 @@ After each `SurveyCycle` collects enough responses, AI #3 (Thematic Grouper) gen
 
 ## 9. Feedback Loop Notification (US 1.3)
 
-When a manager marks a risk as `ADDRESSED` or `RESOLVED` via the dashboard and provides a comment, the bot broadcasts an **anonymous notification** to all project members on Slack.
+When a manager marks a risk as `ADDRESSED` via the dashboard and provides a comment, the bot broadcasts an **anonymous notification** to all project members on Slack.
 
 ### Trigger
 
-`RiskAction.action_type = ADDRESSED` or `RESOLVED` with a non-empty `comment`.
+`RiskAction.action_type = ADDRESSED` with a non-empty `comment`.
 
 ### Dispatch
 
 1. Fetch all active `ProjectMembership` records with a non-null `slack_user_id` for the affected project.
 2. Enqueue a `send-feedback-dm` job for each member in the BullMQ queue (see §12). The message contains only the manager's comment — no personal attribution.
 
-```
+```text
 ┌────────────────────────────────────────────────┐
 │ 📢 Update from the team:                        │
 │                                                │
