@@ -34,6 +34,7 @@ enum SurveyCycleStatus {
 
 enum ParticipationStatus {
   PENDING
+  QUEUED
   SENT
   RESPONDED
   EXPIRED

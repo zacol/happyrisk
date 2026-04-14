@@ -9,11 +9,12 @@ This document outlines the functional requirements for HappyRisk AI from the per
 ### US 1.1: Weekly Check-in
 
 **As a** Team Member,  
-**I want to** receive a proactive DM from the Slack bot once a week,  
+**I want to** receive a proactive DM from the Slack bot on the configured project schedule (`WEEKLY` or `BIWEEKLY`),  
 **so that** I can quickly rate my week (1-5) without leaving my workspace.
 
-- **AC 1:** Bot triggers a Block Kit message with 1-5 buttons.
-- **AC 2:** Interaction is saved even if the user stops after the first click.
+- **AC 1:** Bot triggers a Block Kit message with 1–5 rating buttons.
+- **AC 2:** After selecting a rating, the bot replaces the buttons with a confirmation and an optional free-text comment field (Submit / Skip).
+- **AC 3:** A `SurveyResponse` with `conversation_status: PARTIAL` is persisted after the user submits or skips the initial comment, preserving the rating even if the follow-up is never completed.
 
 ### US 1.2: AI Follow-up Conversation
 
@@ -21,8 +22,9 @@ This document outlines the functional requirements for HappyRisk AI from the per
 **I want to** be asked exactly one relevant follow-up question by the AI,  
 **so that** I can provide context for my rating in a conversational way.
 
-- **AC 1:** AI #1 generates a question based on the rating and initial comment.
-- **AC 2:** The interaction is limited to one question to avoid survey fatigue.
+- **AC 1:** AI #1 generates one contextual follow-up question based on the rating and optional initial comment.
+- **AC 2:** The total survey conversation is capped at three bot messages and two user responses (< 60 seconds total) to avoid survey fatigue.
+- **AC 3:** `PARTIAL` responses (rating + optional comment, no follow-up) are preserved and their ratings are included in the Happiness Index calculation.
 
 ### US 1.3: Feedback Loop Notification
 
@@ -30,7 +32,9 @@ This document outlines the functional requirements for HappyRisk AI from the per
 **I want to** receive a notification when a manager takes action based on team feedback,  
 **so that** I feel my input is valued and leads to real change.
 
-- **AC 1:** Bot sends an anonymous broadcast to the team when a risk is marked as "Resolved" with a comment.
+- **AC 1:** Bot sends an anonymous DM to all project members when a risk is marked as `ADDRESSED` or `RESOLVED` with a non-empty comment.
+- **AC 2:** The notification contains only the manager's comment — no personal attribution or identity information.
+- **AC 3:** After dispatch, `RiskAction.notification_sent` is set to `true` to prevent duplicate notifications.
 
 ---
 
@@ -254,7 +258,43 @@ This document outlines the functional requirements for HappyRisk AI from the per
 ### US 5.18: Survey Configuration
 
 **As an** Admin,  
-**I want to** configure the frequency and timing of surveys (Weekly/Bi-weekly),  
+**I want to** configure the frequency and timing of surveys (Weekly/Bi-weekly) per project,  
 **so that** I can adapt the tool to the specific needs of different departments.
 
-- **AC 1:** Settings panel to choose day/time for the Slack bot trigger.
+- **AC 1:** Settings panel allows selecting the dispatch day (ISO weekday) and time (UTC `HH:MM`) for the Slack bot trigger per project.
+- **AC 2:** An admin can enable or disable automated survey dispatch for a specific project (`SurveyConfig.is_active`).
+
+---
+
+## Epic 6: Slack Workspace Management
+
+### US 6.1: Connect Slack Workspace to Project
+
+**As an** Admin or Project Leader,  
+**I want to** connect a Slack workspace to a project via OAuth,  
+**so that** the bot can send survey DMs to all project members in that workspace.
+
+- **AC 1:** A "Connect Slack" button on the Project Settings page initiates the standard Slack OAuth 2.0 app installation flow.
+- **AC 2:** The OAuth flow uses a signed `state` parameter (CSRF protection) that encodes the `projectId`.
+- **AC 3:** On successful installation, `SlackInstallation` is upserted (workspace ID, bot token, bot user ID) and `Project.slack_workspace_id` is set automatically.
+- **AC 4:** If the Slack workspace is already connected to a different project, the flow is rejected with a `409 Conflict` error and a user-facing message.
+- **AC 5:** After a successful connection, the user is redirected back to Project Settings with a `?slackConnected=true` confirmation.
+
+### US 6.2: Auto-Sync and On-Demand Sync of Slack Users
+
+**As an** Admin or Project Leader,  
+**I want to** have Slack workspace members automatically matched to project members by email,  
+**so that** their `slack_user_id` is populated and they start receiving survey DMs without manual effort.
+
+- **AC 1:** Immediately after a workspace is connected (US 6.1), the system calls `users.list` and attempts to match each Slack member's email to a `User.email` in the DB, updating `ProjectMembership.slack_user_id`.
+- **AC 2:** A "Sync Users" button in Project Settings allows triggering the same sync on demand (e.g., for new workspace members added after initial installation).
+- **AC 3:** Slack members with no matching `User.email` in the DB are skipped silently and can be linked manually (US 6.3).
+
+### US 6.3: Manually Link Slack User to Project Member
+
+**As an** Admin,  
+**I want to** manually assign a Slack User ID to a project member,  
+**so that** team members who could not be auto-matched by email can still participate in surveys.
+
+- **AC 1:** The admin panel provides a way to set `ProjectMembership.slack_user_id` for any member of a project.
+- **AC 2:** Once linked, the member is included in future survey dispatches for that project.

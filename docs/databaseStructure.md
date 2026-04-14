@@ -28,7 +28,9 @@ Project 1──* ProjectMembership *──1 User
                       │
                       ├──* SurveyConfig
                       │
-                      └──* HappinessSnapshot (weekly aggregates)
+                      ├──* HappinessSnapshot (weekly aggregates)
+                      │
+                      └──? SlackInstallation
 
 User 1──* OAuthAccount
 ```
@@ -55,14 +57,14 @@ A team (e.g., "Backend Squad", "Mobile QA").
 
 A cross-functional project or initiative.
 
-| Column               | Type           | Constraints               | Description                                            |
-| :------------------- | :------------- | :------------------------ | :----------------------------------------------------- |
-| `id`                 | `UUID`         | PK, default `uuid()`      | Unique identifier.                                     |
-| `name`               | `VARCHAR(255)` | NOT NULL                  | Project display name.                                  |
-| `slack_workspace_id` | `VARCHAR(64)`  | NULLABLE, UNIQUE          | Slack workspace ID for project-specific communication. |
-| `is_active`          | `BOOLEAN`      | NOT NULL, default `true`  | Whether the project is currently active.               |
-| `created_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Record creation timestamp.                             |
-| `updated_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Last update timestamp (`@updatedAt`).                  |
+| Column               | Type           | Constraints               | Description                                                                                                                    |
+| :------------------- | :------------- | :------------------------ | :----------------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | `UUID`         | PK, default `uuid()`      | Unique identifier.                                                                                                             |
+| `name`               | `VARCHAR(255)` | NOT NULL                  | Project display name.                                                                                                          |
+| `slack_workspace_id` | `VARCHAR(64)`  | NULLABLE, UNIQUE          | Slack workspace ID. Auto-populated via the "Connect Slack" OAuth flow (see `docs/slackIntegration.md` §4). Never set manually. |
+| `is_active`          | `BOOLEAN`      | NOT NULL, default `true`  | Whether the project is currently active.                                                                                       |
+| `created_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Record creation timestamp.                                                                                                     |
+| `updated_at`         | `TIMESTAMPTZ`  | NOT NULL, default `now()` | Last update timestamp (`@updatedAt`).                                                                                          |
 
 ---
 
@@ -158,14 +160,14 @@ Represents a single survey period (e.g., "Week of 2026-03-16") for a project.
 
 Tracks **who** was invited and whether they responded — but stores **no content**. This table exists solely for calculating response rates (KPI #1: >80%).
 
-| Column            | Type          | Constraints                     | Description                                |
-| :---------------- | :------------ | :------------------------------ | :----------------------------------------- |
-| `id`              | `UUID`        | PK, default `uuid()`            | Unique identifier.                         |
-| `user_id`         | `UUID`        | FK → `User.id`, NOT NULL        | The invited team member.                   |
-| `survey_cycle_id` | `UUID`        | FK → `SurveyCycle.id`, NOT NULL | The cycle this participation belongs to.   |
-| `status`          | `ENUM`        | NOT NULL, default `PENDING`     | `PENDING`, `SENT`, `RESPONDED`, `EXPIRED`. |
-| `sent_at`         | `TIMESTAMPTZ` | NULLABLE                        | When the DM was sent.                      |
-| `responded_at`    | `TIMESTAMPTZ` | NULLABLE                        | When the user completed the interaction.   |
+| Column            | Type          | Constraints                     | Description                                          |
+| :---------------- | :------------ | :------------------------------ | :--------------------------------------------------- |
+| `id`              | `UUID`        | PK, default `uuid()`            | Unique identifier.                                   |
+| `user_id`         | `UUID`        | FK → `User.id`, NOT NULL        | The invited team member.                             |
+| `survey_cycle_id` | `UUID`        | FK → `SurveyCycle.id`, NOT NULL | The cycle this participation belongs to.             |
+| `status`          | `ENUM`        | NOT NULL, default `PENDING`     | `PENDING`, `QUEUED`, `SENT`, `RESPONDED`, `EXPIRED`. |
+| `sent_at`         | `TIMESTAMPTZ` | NULLABLE                        | When the DM was sent.                                |
+| `responded_at`    | `TIMESTAMPTZ` | NULLABLE                        | When the user completed the interaction.             |
 
 **Constraints:** UNIQUE(`user_id`, `survey_cycle_id`)
 **Indexes:** `survey_cycle_id`
@@ -334,6 +336,29 @@ Stores hashed refresh tokens for session rotation and validation.
 
 ---
 
+### 17. `SlackInstallation`
+
+Stores the result of the "Connect Slack" OAuth installation for a given project. One record per project, created automatically via the OAuth flow (see `docs/slackIntegration.md` §4). The `bot_token` field grants the bot permission to send messages in that specific workspace.
+
+| Column            | Type           | Constraints                         | Description                                                            |
+| :---------------- | :------------- | :---------------------------------- | :--------------------------------------------------------------------- |
+| `id`              | `UUID`         | PK, default `uuid()`                | Unique identifier.                                                     |
+| `project_id`      | `UUID`         | FK → `Project.id`, NOT NULL, UNIQUE | The project this workspace is linked to. One installation per project. |
+| `workspace_id`    | `VARCHAR(64)`  | NOT NULL, UNIQUE                    | Slack team/workspace ID (from `team.id` in the OAuth response).        |
+| `workspace_name`  | `VARCHAR(255)` | NULLABLE                            | Slack workspace display name (from `team.name`).                       |
+| `bot_token`       | `TEXT`         | NOT NULL                            | Bot User OAuth Token (`xoxb-...`). **Must be encrypted at rest.**      |
+| `bot_user_id`     | `VARCHAR(64)`  | NOT NULL                            | Bot's own Slack user ID in this workspace.                             |
+| `installed_by_id` | `UUID`         | FK → `User.id`, NULLABLE            | The platform user (Admin/Leader) who connected the workspace.          |
+| `installed_at`    | `TIMESTAMPTZ`  | NOT NULL, default `now()`           | When the workspace was first connected.                                |
+| `updated_at`      | `TIMESTAMPTZ`  | NOT NULL, default `now()`           | Last update timestamp (`@updatedAt`). Updated on re-install.           |
+
+**Constraints:** `UNIQUE(project_id)`, `UNIQUE(workspace_id)`  
+**Indexes:** `project_id`, `workspace_id`
+
+> **Security note:** `bot_token` contains a sensitive credential. It must be encrypted at rest using a symmetric key stored as an environment variable (e.g., `ENCRYPTION_KEY`). Never log or return this value in any API response.
+
+---
+
 ## Enums
 
 ```prisma
@@ -360,6 +385,7 @@ enum SurveyCycleStatus {
 
 enum ParticipationStatus {
   PENDING
+  QUEUED
   SENT
   RESPONDED
   EXPIRED
@@ -467,15 +493,16 @@ The core privacy mechanism relies on a **physical separation** of identity and c
 
 The following `onDelete` rules are applied in the Prisma schema:
 
-| Relation                          | onDelete   | Reason                                    |
-| :-------------------------------- | :--------- | :---------------------------------------- |
-| User → RefreshToken               | `Cascade`  | Session data, cleaned on user removal     |
-| User → OAuthAccount               | `Cascade`  | Identity link, cleaned on user removal    |
-| Project → ProjectMembership       | `Cascade`  | Membership is scoped to project lifecycle |
-| SurveyCycle → SurveyParticipation | `Restrict` | Historical response rate data             |
-| SurveyCycle → SurveyResponse      | `Restrict` | Anonymous data is irreplaceable           |
-| SurveyResponse → AIAnalysis       | `Restrict` | Prevent accidental loss of analysis       |
-| All other FKs                     | `Restrict` | Default — protect core domain entities    |
+| Relation                          | onDelete   | Reason                                          |
+| :-------------------------------- | :--------- | :---------------------------------------------- |
+| User → RefreshToken               | `Cascade`  | Session data, cleaned on user removal           |
+| User → OAuthAccount               | `Cascade`  | Identity link, cleaned on user removal          |
+| Project → ProjectMembership       | `Cascade`  | Membership is scoped to project lifecycle       |
+| Project → SlackInstallation       | `Cascade`  | Installation is meaningless without the project |
+| SurveyCycle → SurveyParticipation | `Restrict` | Historical response rate data                   |
+| SurveyCycle → SurveyResponse      | `Restrict` | Anonymous data is irreplaceable                 |
+| SurveyResponse → AIAnalysis       | `Restrict` | Prevent accidental loss of analysis             |
+| All other FKs                     | `Restrict` | Default — protect core domain entities          |
 
 ### Prisma Version
 
