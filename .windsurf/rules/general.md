@@ -49,6 +49,19 @@ The ESLint config enforces a strict import order and **forbids parent-relative i
 
 **Never use `..` to import from a parent directory.** Use the `@/` path alias (maps to `src/`) or workspace package imports instead.
 
+## Barrel Files & Module Exports
+
+Create `index.ts` barrel files at public API boundaries — folders whose exports are consumed by other modules. Apply the rules from the table below:
+
+| Rule               | Description                                                        |
+| ------------------ | ------------------------------------------------------------------ |
+| Create barrel when | Folder exports are consumed by OTHER modules (public API boundary) |
+| Avoid barrel when  | Internal utils serving a single parent component — import directly |
+| Re-export style    | Named re-exports only: `export { Button } from './Button'`         |
+| Never wildcard     | Avoid `export * from` — breaks tree shaking, hides API surface     |
+| Keep flat          | One level deep — no barrel importing another barrel                |
+| Test with build    | Verify barrel doesn't pull unused code into bundle                 |
+
 ## Code Formatting
 
 Prettier is the single source of formatting truth. Config (`.prettierrc`):
