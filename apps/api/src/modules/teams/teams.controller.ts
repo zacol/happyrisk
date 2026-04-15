@@ -6,9 +6,11 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
+import { PaginationQueryDto } from '@/common/dto/pagination-query.dto';
 import { Roles } from '@/modules/auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt.guard';
 import { RolesGuard } from '@/modules/auth/guards/roles.guard';
@@ -28,8 +30,8 @@ export class TeamsController {
   }
 
   @Get()
-  findAll() {
-    return this.teamsService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.teamsService.findAll(query);
   }
 
   @Get(':id')

@@ -1,6 +1,13 @@
 'use client';
 
-import type { User, UserCreate, UserUpdate } from '@happyrisk/core';
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_PAGE,
+  type PaginatedResponse,
+  type User,
+  type UserCreate,
+  type UserUpdate,
+} from '@happyrisk/core';
 
 import {
   useMutation,
@@ -16,13 +23,28 @@ import { api } from '@/lib/api';
 
 export const USERS_KEY = ['users'] as const;
 
-type UseUsersOptions = Omit<UseQueryOptions<User[], Error>, 'queryKey' | 'queryFn'>;
+interface UseUsersParams {
+  page?: number;
+  limit?: number;
+}
 
-export function useUsers(options?: UseUsersOptions): UseQueryResult<User[], Error> {
-  return useQuery<User[], Error>({
-    queryKey: USERS_KEY,
+type UseUsersOptions = Omit<
+  UseQueryOptions<PaginatedResponse<User>, Error>,
+  'queryKey' | 'queryFn'
+>;
+
+export function useUsers(
+  params: UseUsersParams = {},
+  options?: UseUsersOptions,
+): UseQueryResult<PaginatedResponse<User>, Error> {
+  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT } = params;
+
+  return useQuery<PaginatedResponse<User>, Error>({
+    queryKey: [...USERS_KEY, { page, limit }],
     queryFn: async () => {
-      const { data } = await api.get<User[]>('/users');
+      const { data } = await api.get<PaginatedResponse<User>>('/users', {
+        params: { page, limit },
+      });
 
       return data;
     },

@@ -1,4 +1,5 @@
 export * from './enums';
+export * from './pagination';
 export * from './risk';
 export * from './survey';
 export * from './team';

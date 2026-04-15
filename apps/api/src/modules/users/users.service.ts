@@ -1,4 +1,4 @@
-import type { ChangeRole, UserCreate, UserUpdate } from '@happyrisk/core';
+import type { ChangeRole, PaginationQuery, UserCreate, UserUpdate } from '@happyrisk/core';
 
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 
@@ -41,11 +41,26 @@ export class UsersService {
     }
   }
 
-  async findAll() {
-    return this.prisma.user.findMany({
-      select: this.userSelect,
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(query: PaginationQuery) {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.user.count(),
+      this.prisma.user.findMany({
+        select: this.userSelect,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      meta: {
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      },
+      items,
+    };
   }
 
   async findOne(id: string) {

@@ -1,11 +1,25 @@
 'use client';
 
+import { useRouter, useSearchParams } from 'next/navigation';
+
+import { Pagination } from '@/components/ui/pagination';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
 import { UsersTable } from '@/components/users/UsersTable';
 import { useUsers } from '@/hooks/useUsers';
 
 export default function UsersPage() {
-  const { data: users, isLoading, isError } = useUsers();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const page = Number(searchParams.get('page')) || 1;
+
+  const { data, isLoading, isError } = useUsers({ page });
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.set('page', String(newPage));
+    router.replace(`?${params.toString()}`);
+  };
 
   if (isLoading) {
     return (
@@ -32,7 +46,15 @@ export default function UsersPage() {
         </div>
         <CreateUserDialog />
       </div>
-      <UsersTable users={users ?? []} />
+      <UsersTable users={data?.items ?? []} />
+      {data && (
+        <Pagination
+          page={page}
+          totalPages={data.meta.pagination.totalPages}
+          onPageChange={handlePageChange}
+          className="mt-4"
+        />
+      )}
     </div>
   );
 }

@@ -19,6 +19,7 @@ const mockUser = {
 
 const mockPrismaService = {
   user: {
+    count: jest.fn(),
     findUnique: jest.fn(),
     findMany: jest.fn(),
     create: jest.fn(),
@@ -115,12 +116,17 @@ describe('UsersService', () => {
   });
 
   describe('findAll', () => {
-    it('should return all users', async () => {
-      mockPrismaService.user.findMany.mockResolvedValue([mockUser]);
+    it('should return paginated users', async () => {
+      mockPrismaService.$transaction.mockResolvedValue([1, [mockUser]]);
 
-      const result = await service.findAll();
+      const result = await service.findAll({ page: 1, limit: 20 });
 
-      expect(result).toEqual([mockUser]);
+      expect(result).toEqual({
+        meta: {
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        },
+        items: [mockUser],
+      });
     });
   });
 

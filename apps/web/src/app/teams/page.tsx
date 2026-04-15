@@ -1,11 +1,25 @@
 'use client';
 
+import { useRouter, useSearchParams } from 'next/navigation';
+
 import { CreateTeamDialog } from '@/components/teams/CreateTeamDialog';
 import { TeamsTable } from '@/components/teams/TeamsTable';
+import { Pagination } from '@/components/ui/pagination';
 import { useTeams } from '@/hooks/useTeams';
 
 export default function TeamsPage() {
-  const { data: teams, isLoading, isError } = useTeams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const page = Number(searchParams.get('page')) || 1;
+
+  const { data, isLoading, isError } = useTeams({ page });
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    params.set('page', String(newPage));
+    router.replace(`?${params.toString()}`);
+  };
 
   if (isLoading) {
     return (
@@ -32,7 +46,15 @@ export default function TeamsPage() {
         </div>
         <CreateTeamDialog />
       </div>
-      <TeamsTable teams={teams ?? []} />
+      <TeamsTable teams={data?.items ?? []} />
+      {data && (
+        <Pagination
+          page={page}
+          totalPages={data.meta.pagination.totalPages}
+          onPageChange={handlePageChange}
+          className="mt-4"
+        />
+      )}
     </div>
   );
 }

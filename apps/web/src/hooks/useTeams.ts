@@ -1,6 +1,13 @@
 'use client';
 
-import type { Team, TeamCreate, TeamUpdate } from '@happyrisk/core';
+import {
+  DEFAULT_LIMIT,
+  DEFAULT_PAGE,
+  type PaginatedResponse,
+  type Team,
+  type TeamCreate,
+  type TeamUpdate,
+} from '@happyrisk/core';
 
 import {
   useMutation,
@@ -16,13 +23,28 @@ import { api } from '@/lib/api';
 
 export const TEAMS_KEY = ['teams'] as const;
 
-type UseTeamsOptions = Omit<UseQueryOptions<Team[], Error>, 'queryKey' | 'queryFn'>;
+interface UseTeamsParams {
+  page?: number;
+  limit?: number;
+}
 
-export function useTeams(options?: UseTeamsOptions): UseQueryResult<Team[], Error> {
-  return useQuery<Team[], Error>({
-    queryKey: TEAMS_KEY,
+type UseTeamsOptions = Omit<
+  UseQueryOptions<PaginatedResponse<Team>, Error>,
+  'queryKey' | 'queryFn'
+>;
+
+export function useTeams(
+  params: UseTeamsParams = {},
+  options?: UseTeamsOptions,
+): UseQueryResult<PaginatedResponse<Team>, Error> {
+  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT } = params;
+
+  return useQuery<PaginatedResponse<Team>, Error>({
+    queryKey: [...TEAMS_KEY, { page, limit }],
     queryFn: async () => {
-      const { data } = await api.get<Team[]>('/teams');
+      const { data } = await api.get<PaginatedResponse<Team>>('/teams', {
+        params: { page, limit },
+      });
 
       return data;
     },

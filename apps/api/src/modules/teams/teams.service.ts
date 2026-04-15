@@ -1,4 +1,4 @@
-import type { TeamCreate, TeamUpdate } from '@happyrisk/core';
+import type { PaginationQuery, TeamCreate, TeamUpdate } from '@happyrisk/core';
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 
@@ -15,11 +15,26 @@ export class TeamsService {
     });
   }
 
-  async findAll() {
-    return this.prisma.team.findMany({
-      select: this.teamSelect,
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(query: PaginationQuery) {
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.team.count(),
+      this.prisma.team.findMany({
+        select: this.teamSelect,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    return {
+      meta: {
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      },
+      items,
+    };
   }
 
   async findOne(id: string) {
