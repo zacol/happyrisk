@@ -195,7 +195,7 @@ private readonly userSelect = {
 - Use `prisma.$transaction([...])` for atomic multi-step operations.
 - Use `prisma.$transaction(async (tx) => { ... })` for conditional/interactive transactions (e.g., optimistic locking patterns).
 - Prefer conditional `updateMany` with `where: { id, revoked: false }` to implement single-winner gates in concurrent scenarios.
-- Never write raw SQL. Use Prisma's query builder exclusively — it guarantees parameterized queries and prevents SQL injection.
+- Never write raw SQL for data access. Use Prisma's query builder exclusively — it guarantees parameterized queries and prevents SQL injection. **Exception:** parameterized `prisma.$queryRaw` is permitted for lightweight connectivity/health checks (e.g., `SELECT 1`) where the query builder has no equivalent. Never interpolate user input into `$queryRaw` — always use tagged template literals so parameters are bound.
 - Always handle Prisma error codes (`P2002`, `P2025`, etc.) explicitly in catch blocks. Do not let Prisma exceptions bubble up unhandled to the client.
 
 ## State-Changing Operations

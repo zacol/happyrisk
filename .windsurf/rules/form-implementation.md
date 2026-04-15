@@ -77,7 +77,7 @@ For non-standard or highly custom inputs (e.g., file upload, rich text editor, c
 
 ## Form JSX/TSX
 
-- Always use the `void handleSubmit(onSubmit)(e)` pattern to handle the promise without an unhandled rejection.
+- Use `void handleSubmit(onSubmit)(e)` to satisfy TypeScript/ESLint rules (`no-misused-promises`) — the `void` operator discards the promise return value so the handler signature stays `void`, but it does **not** catch errors. Implement real rejection handling via `try/catch` inside `onSubmit` (see Submission Handling below) to prevent unhandled promise rejections.
 - Add `noValidate` to the `<form>` element — schema validation replaces browser-native validation bubbles.
 - Do not break native Enter-to-submit behavior — never call `preventDefault` on the wrong element.
 - The submit button must be disabled while the mutation is pending (`mutation.isPending`).
@@ -124,8 +124,7 @@ const onSubmit = async (data: TeamCreate) => {
     reset();
     // close dialog, navigate, etc.
   } catch (error: unknown) {
-    const axiosError = error as { response?: { data?: { message?: string } } };
-    const message = mapServerError(axiosError) ?? 'Failed to create team';
+    const message = isApiErrorWithMessage(error) ? mapServerError(error) : 'Failed to create team';
     toast.error(message);
   }
 };

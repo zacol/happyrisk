@@ -172,7 +172,7 @@ Use the App Router file conventions (`loading.tsx`, `error.tsx`, `not-found.tsx`
 
 - **Do not memoize by default.** Measure first. `React.memo` only helps when re-renders are measurably expensive and props don't change often.
 - **Route-level code splitting is automatic** in the App Router — each `page.tsx` is a separate chunk. You do not need to manually split routes.
-- Use `next/dynamic` with `{ ssr: false }` only for heavy client-only components that depend on browser APIs (e.g., chart libraries using `window` or `canvas`). Do not use `React.lazy()` — it does not work with Server Components.
+- Use `next/dynamic` with `{ ssr: false }` only for heavy client-only components that depend on browser APIs (e.g., chart libraries using `window` or `canvas`). Do not use `React.lazy()` in Server Components — it is unsupported there. In Client Components, `React.lazy()` with `<Suspense>` is valid for code-splitting, but prefer `next/dynamic` for App Router compatibility.
 - Prefer `loading.tsx` file convention and `<Suspense>` boundaries for streaming and progressive loading.
 
 ## React Anti-Patterns
