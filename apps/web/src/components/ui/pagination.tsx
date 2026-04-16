@@ -3,84 +3,91 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
+const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+
 interface PaginationProps {
-  page: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
+  pageIndex: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (pageIndex: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+  itemName?: string;
   className?: string;
 }
 
-function getVisiblePages(current: number, total: number): (number | 'ellipsis')[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  if (current <= 3) {
-    return [1, 2, 3, 4, 'ellipsis', total];
-  }
-
-  if (current >= total - 2) {
-    return [1, 'ellipsis', total - 3, total - 2, total - 1, total];
-  }
-
-  return [1, 'ellipsis', current - 1, current, current + 1, 'ellipsis', total];
-}
-
-function Pagination({ page, totalPages, onPageChange, className }: PaginationProps) {
-  if (totalPages <= 1) return null;
-
-  const pages = getVisiblePages(page, totalPages);
+function Pagination({
+  pageIndex,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
+  itemName = 'items',
+  className,
+}: PaginationProps) {
+  const totalPages = Math.ceil(total / pageSize);
+  const startItem = pageIndex * pageSize + 1;
+  const endItem = Math.min((pageIndex + 1) * pageSize, total);
 
   return (
-    <nav
-      role="navigation"
-      aria-label="Pagination"
-      className={cn('flex items-center justify-center gap-1', className)}
-    >
-      <Button
-        variant="outline"
-        size="icon-sm"
-        disabled={page <= 1}
-        onClick={() => onPageChange(page - 1)}
-        aria-label="Previous page"
-      >
-        <ChevronLeft />
-      </Button>
+    <div className={cn('flex items-center justify-between gap-4', className)}>
+      <div className="text-sm text-muted-foreground">
+        Showing {startItem}-{endItem} of {total} {itemName}
+      </div>
 
-      {pages.map((p, i) =>
-        p === 'ellipsis' ? (
-          <span
-            key={`ellipsis-${i}`}
-            className="flex h-7 w-7 items-center justify-center text-sm text-muted-foreground"
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Rows per page</span>
+          <Select
+            value={String(pageSize)}
+            onValueChange={(value) => onPageSizeChange(Number(value))}
           >
-            …
-          </span>
-        ) : (
+            <SelectTrigger className="h-8 w-[70px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <SelectItem key={size} value={String(size)}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <nav role="navigation" aria-label="Pagination" className="flex items-center gap-1">
           <Button
-            key={p}
-            variant={p === page ? 'default' : 'outline'}
-            size="icon-sm"
-            onClick={() => onPageChange(p)}
-            aria-label={`Page ${p}`}
-            aria-current={p === page ? 'page' : undefined}
+            variant="outline"
+            size="sm"
+            disabled={pageIndex <= 0}
+            onClick={() => onPageChange(pageIndex - 1)}
+            aria-label="Previous page"
           >
-            {p}
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            Previous
           </Button>
-        ),
-      )}
 
-      <Button
-        variant="outline"
-        size="icon-sm"
-        disabled={page >= totalPages}
-        onClick={() => onPageChange(page + 1)}
-        aria-label="Next page"
-      >
-        <ChevronRight />
-      </Button>
-    </nav>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pageIndex >= totalPages - 1}
+            onClick={() => onPageChange(pageIndex + 1)}
+            aria-label="Next page"
+          >
+            Next
+            <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </nav>
+      </div>
+    </div>
   );
 }
 

@@ -1,25 +1,26 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-
 import { CreateTeamDialog } from '@/components/teams/CreateTeamDialog';
-import { TeamsTable } from '@/components/teams/TeamsTable';
+import { TeamsTableColumns } from '@/components/teams/TeamsTableColumns';
+import { DataTable } from '@/components/ui/data-table';
 import { Pagination } from '@/components/ui/pagination';
+import { useDataTableState } from '@/hooks/useDataTableState';
 import { useTeams } from '@/hooks/useTeams';
 
 export default function TeamsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const page = Number(searchParams.get('page')) || 1;
+  const tableState = useDataTableState({
+    defaultSortBy: 'name',
+    defaultSortDir: 'asc',
+  });
 
-  const { data, isLoading, isError } = useTeams({ page });
+  const { data, isLoading, isError } = useTeams({
+    pageIndex: tableState.pageIndex,
+    pageSize: tableState.pageSize,
+    sortBy: tableState.sortBy,
+    sortDir: tableState.sortDir,
+  });
 
-  const handlePageChange = (newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-
-    params.set('page', String(newPage));
-    router.replace(`?${params.toString()}`);
-  };
+  const columns = TeamsTableColumns();
 
   if (isLoading) {
     return (
@@ -46,12 +47,30 @@ export default function TeamsPage() {
         </div>
         <CreateTeamDialog />
       </div>
-      <TeamsTable teams={data?.items ?? []} />
+
+      <DataTable
+        columns={columns}
+        data={data?.items ?? []}
+        totalRows={data?.meta.pagination.total ?? 0}
+        sorting={tableState.sorting}
+        pagination={tableState.pagination}
+        onSortingChange={tableState.onSortingChange}
+        onPaginationChange={tableState.onPaginationChange}
+        emptyMessage="No teams found."
+      />
+
       {data && (
         <Pagination
-          page={page}
-          totalPages={data.meta.pagination.totalPages}
-          onPageChange={handlePageChange}
+          pageIndex={tableState.pageIndex}
+          pageSize={tableState.pageSize}
+          total={data.meta.pagination.total}
+          onPageChange={(newPage) =>
+            tableState.onPaginationChange((old) => ({ ...old, pageIndex: newPage }))
+          }
+          onPageSizeChange={(newSize) =>
+            tableState.onPaginationChange((old) => ({ ...old, pageSize: newSize, pageIndex: 0 }))
+          }
+          itemName="teams"
           className="mt-4"
         />
       )}

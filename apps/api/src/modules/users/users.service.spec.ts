@@ -119,14 +119,46 @@ describe('UsersService', () => {
     it('should return paginated users', async () => {
       mockPrismaService.$transaction.mockResolvedValue([1, [mockUser]]);
 
-      const result = await service.findAll({ page: 1, limit: 20 });
+      const result = await service.findAll({ pageIndex: 0, pageSize: 20, sortDir: 'asc' });
 
       expect(result).toEqual({
         meta: {
-          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+          pagination: { pageIndex: 0, pageSize: 20, total: 1 },
         },
         items: [mockUser],
       });
+    });
+
+    it('should include sort in meta when a valid sortBy is provided', async () => {
+      mockPrismaService.$transaction.mockResolvedValue([1, [mockUser]]);
+
+      const result = await service.findAll({
+        pageIndex: 0,
+        pageSize: 20,
+        sortBy: 'name',
+        sortDir: 'desc',
+      });
+
+      expect(result).toEqual({
+        meta: {
+          pagination: { pageIndex: 0, pageSize: 20, total: 1 },
+          sort: { sortBy: 'name', sortDir: 'desc' },
+        },
+        items: [mockUser],
+      });
+    });
+
+    it('should not include sort in meta when sortBy is invalid', async () => {
+      mockPrismaService.$transaction.mockResolvedValue([1, [mockUser]]);
+
+      const result = await service.findAll({
+        pageIndex: 0,
+        pageSize: 20,
+        sortBy: 'nonexistent',
+        sortDir: 'asc',
+      });
+
+      expect(result.meta).not.toHaveProperty('sort');
     });
   });
 

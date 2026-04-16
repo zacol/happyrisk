@@ -1,9 +1,9 @@
 'use client';
 
 import {
-  DEFAULT_LIMIT,
-  DEFAULT_PAGE,
-  type PaginatedResponse,
+  DEFAULT_PAGE_INDEX,
+  DEFAULT_PAGE_SIZE,
+  type ListResponse,
   type User,
   type UserCreate,
   type UserUpdate,
@@ -24,26 +24,25 @@ import { api } from '@/lib/api';
 export const USERS_KEY = ['users'] as const;
 
 interface UseUsersParams {
-  page?: number;
-  limit?: number;
+  pageIndex?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
 }
 
-type UseUsersOptions = Omit<
-  UseQueryOptions<PaginatedResponse<User>, Error>,
-  'queryKey' | 'queryFn'
->;
+type UseUsersOptions = Omit<UseQueryOptions<ListResponse<User>, Error>, 'queryKey' | 'queryFn'>;
 
 export function useUsers(
   params: UseUsersParams = {},
   options?: UseUsersOptions,
-): UseQueryResult<PaginatedResponse<User>, Error> {
-  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT } = params;
+): UseQueryResult<ListResponse<User>, Error> {
+  const { pageIndex = DEFAULT_PAGE_INDEX, pageSize = DEFAULT_PAGE_SIZE, sortBy, sortDir } = params;
 
-  return useQuery<PaginatedResponse<User>, Error>({
-    queryKey: [...USERS_KEY, { page, limit }],
+  return useQuery<ListResponse<User>, Error>({
+    queryKey: [...USERS_KEY, { pageIndex, pageSize, sortBy, sortDir }],
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<User>>('/users', {
-        params: { page, limit },
+      const { data } = await api.get<ListResponse<User>>('/users', {
+        params: { pageIndex, pageSize, sortBy, sortDir },
       });
 
       return data;

@@ -1,9 +1,9 @@
 'use client';
 
 import {
-  DEFAULT_LIMIT,
-  DEFAULT_PAGE,
-  type PaginatedResponse,
+  DEFAULT_PAGE_INDEX,
+  DEFAULT_PAGE_SIZE,
+  type ListResponse,
   type Team,
   type TeamCreate,
   type TeamUpdate,
@@ -24,26 +24,25 @@ import { api } from '@/lib/api';
 export const TEAMS_KEY = ['teams'] as const;
 
 interface UseTeamsParams {
-  page?: number;
-  limit?: number;
+  pageIndex?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
 }
 
-type UseTeamsOptions = Omit<
-  UseQueryOptions<PaginatedResponse<Team>, Error>,
-  'queryKey' | 'queryFn'
->;
+type UseTeamsOptions = Omit<UseQueryOptions<ListResponse<Team>, Error>, 'queryKey' | 'queryFn'>;
 
 export function useTeams(
   params: UseTeamsParams = {},
   options?: UseTeamsOptions,
-): UseQueryResult<PaginatedResponse<Team>, Error> {
-  const { page = DEFAULT_PAGE, limit = DEFAULT_LIMIT } = params;
+): UseQueryResult<ListResponse<Team>, Error> {
+  const { pageIndex = DEFAULT_PAGE_INDEX, pageSize = DEFAULT_PAGE_SIZE, sortBy, sortDir } = params;
 
-  return useQuery<PaginatedResponse<Team>, Error>({
-    queryKey: [...TEAMS_KEY, { page, limit }],
+  return useQuery<ListResponse<Team>, Error>({
+    queryKey: [...TEAMS_KEY, { pageIndex, pageSize, sortBy, sortDir }],
     queryFn: async () => {
-      const { data } = await api.get<PaginatedResponse<Team>>('/teams', {
-        params: { page, limit },
+      const { data } = await api.get<ListResponse<Team>>('/teams', {
+        params: { pageIndex, pageSize, sortBy, sortDir },
       });
 
       return data;

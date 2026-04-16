@@ -1,4 +1,4 @@
 export * from './enums';
-export * from './pagination';
+export * from './list';
 export * from './team';
 export * from './user';

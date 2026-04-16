@@ -129,8 +129,8 @@ Every list endpoint that may return an unbounded result set **must** support pag
 
 | Parameter       | Format                  | Description                               |
 | --------------- | ----------------------- | ----------------------------------------- |
-| `page`          | `page=1`                | Page number (1-indexed)                   |
-| `limit`         | `limit=20`              | Results per page                          |
+| `pageIndex`     | `pageIndex=0`           | Page index (0-indexed)                    |
+| `pageSize`      | `pageSize=20`           | Results per page                          |
 | `sort[field]`   | `sort[createdAt]=desc`  | Sort by field, direction: `asc` or `desc` |
 | `filter[field]` | `filter[status]=ACTIVE` | Filter by field value                     |
 
@@ -175,17 +175,27 @@ Every list endpoint that may return an unbounded result set **must** support pag
 {
   "meta": {
     "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 57,
-      "totalPages": 6
+      "pageIndex": 0,
+      "pageSize": 10,
+      "total": 57
+    }
+  },
+  "items": [{ "..." }]
+}
+```
+
+When `filter`, `sort`, or `search` parameters are applied, they are included in `meta` to echo back what was used:
+
+```json
+{
+  "meta": {
+    "pagination": {
+      "pageIndex": 0,
+      "pageSize": 10,
+      "total": 12
     },
-    "filter": {
-      "status": "active"
-    },
-    "sort": {
-      "lastName": "ASC"
-    },
+    "filter": { "status": "active" },
+    "sort": { "sortBy": "isActive", "sortDir": "desc" },
     "search": "john"
   },
   "items": [{ "..." }]
@@ -194,8 +204,8 @@ Every list endpoint that may return an unbounded result set **must** support pag
 
 **Rules:**
 
-- Define a shared `PaginationQueryDto` (Zod schema in `packages/core`) for `page` and `limit`.
-- Default `limit` = 20. Maximum `limit` = 100 — cap silently.
+- Define a shared `PaginationQueryDto` (Zod schema in `packages/core`) for `pageIndex` and `pageSize`.
+- Default `pageSize` = 20. Maximum `pageSize` = 100 — cap silently.
 - Invalid filter or sort field names are silently ignored (do not apply, do not error).
 - Use Prisma `skip`/`take` for pagination and `orderBy` for sorting.
 - Use `prisma.$transaction([countQuery, dataQuery])` to get total count and data in a single round-trip when both are needed.
