@@ -35,7 +35,7 @@ function Pagination({
 }: PaginationProps) {
   const totalPages = Math.ceil(total / pageSize);
   const safePageIndex = Math.max(0, Math.min(pageIndex, totalPages - 1));
-  const startItem = safePageIndex * pageSize + 1;
+  const startItem = total === 0 ? 0 : safePageIndex * pageSize + 1;
   const endItem = Math.min((safePageIndex + 1) * pageSize, total);
 
   return (

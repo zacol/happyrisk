@@ -13,12 +13,17 @@ export default function UsersPage() {
     defaultSortDir: 'asc',
   });
 
-  const { data, isLoading, isError } = useUsers({
-    pageIndex: tableState.pageIndex,
-    pageSize: tableState.pageSize,
-    sortBy: tableState.sortBy,
-    sortDir: tableState.sortDir,
-  });
+  const { data, isLoading, isError } = useUsers(
+    {
+      pageIndex: tableState.pageIndex,
+      pageSize: tableState.pageSize,
+      sortBy: tableState.sortBy,
+      sortDir: tableState.sortDir,
+    },
+    {
+      placeholderData: (previousData) => previousData,
+    },
+  );
 
   const columns = getUsersTableColumns();
 

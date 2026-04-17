@@ -68,33 +68,50 @@ export function DataTable<T>({
         <TableHeader className="bg-muted/50">
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  className={cn(
-                    'h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground',
-                    header.column.getCanSort() && 'cursor-pointer select-none',
-                  )}
-                  style={
-                    (header.column.columnDef as DataTableColumnDef<T>).fitToContent
-                      ? ({ width: '1px' } as CSSProperties)
-                      : undefined
-                  }
-                  onClick={header.column.getToggleSortingHandler()}
-                >
-                  <div className="flex items-center gap-1">
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                    {header.column.getIsSorted() === 'asc' && (
-                      <span className="text-muted-foreground">↑</span>
+              {headerGroup.headers.map((header) => {
+                const canSort = header.column.getCanSort();
+                const sortHandler = header.column.getToggleSortingHandler();
+                const sorted = header.column.getIsSorted();
+                const ariaSort =
+                  sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : 'none';
+
+                return (
+                  <TableHead
+                    key={header.id}
+                    className={cn(
+                      'h-11 px-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground',
+                      canSort && 'cursor-pointer select-none',
                     )}
-                    {header.column.getIsSorted() === 'desc' && (
-                      <span className="text-muted-foreground">↓</span>
-                    )}
-                  </div>
-                </TableHead>
-              ))}
+                    style={
+                      (header.column.columnDef as DataTableColumnDef<T>).fitToContent
+                        ? ({ width: '1px' } as CSSProperties)
+                        : undefined
+                    }
+                    onClick={sortHandler}
+                    role={canSort ? 'button' : undefined}
+                    tabIndex={canSort ? 0 : undefined}
+                    aria-sort={canSort ? ariaSort : undefined}
+                    onKeyDown={
+                      canSort
+                        ? (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              sortHandler?.(event);
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className="flex items-center gap-1">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                      {sorted === 'asc' && <span className="text-muted-foreground">↑</span>}
+                      {sorted === 'desc' && <span className="text-muted-foreground">↓</span>}
+                    </div>
+                  </TableHead>
+                );
+              })}
             </TableRow>
           ))}
         </TableHeader>
