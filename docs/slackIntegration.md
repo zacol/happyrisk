@@ -106,7 +106,6 @@ The Slack App must request the following bot token scopes:
 9. NestJS upserts SlackInstallation record in the DB:
      - workspace_id, workspace_name, bot_token, bot_user_id
      - project_id (from state), installed_by_id (from JWT)
-   Also sets: Project.slack_workspace_id = team.id
         ↓
 10. NestJS calls users.list on the newly connected workspace.
     → Auto-sync: match Slack members by email → ProjectMembership.slack_user_id (see §5).
@@ -134,7 +133,7 @@ The Slack platform identifies users by a **Slack User ID** (`U012AB3CD`). The in
 
 - `ProjectMembership.slack_user_id` stores the Slack User ID for a specific user **within a specific project's Slack workspace**.
 - This field is nullable — a user can exist in the system without a linked Slack identity.
-- The `Project.slack_workspace_id` field identifies which Slack workspace corresponds to a project. It is auto-populated during the OAuth flow (§4, step 9) and must never be set manually.
+- The Slack workspace linked to a project is identified by `SlackInstallation.workspace_id` (one-to-one with `Project`). It is auto-populated during the OAuth flow (§4, step 9) and must never be set manually.
 
 ### Lookup Flow (Bot receiving an event)
 
@@ -185,10 +184,18 @@ Each project has a `SurveyConfig` record that defines:
 
 1. **Cron fires** (evaluated every minute or every relevant time slot).
 2. Find all active `SurveyConfig` records where the current UTC time matches `day_of_week` + `time_utc`.
-3. For each matching project, create a new `SurveyCycle` record (`status: ACTIVE`, `period_start`, `period_end`).
+3. For each matching project, create a new `SurveyCycle` record (`status: ACTIVE`, `period_start` = current UTC date, `period_end` = `period_start + 3 days`).
 4. Fetch all active `ProjectMembership` records with a non-null `slack_user_id` for the project.
 5. For each member, create a `SurveyParticipation` record (`status: QUEUED`) and enqueue a `send-survey-dm` job in the BullMQ queue (see §12).
 6. The queue processor updates `SurveyParticipation.status` to `SENT` and sets `sent_at` after a successful `chat.postMessage` call (see §12).
+
+### Cycle Closing
+
+A separate cron (evaluated at least hourly) looks for `SurveyCycle` records whose `period_end` has passed and that are still `ACTIVE`:
+
+1. `SurveyCycle.status` is set to `COMPLETED`.
+2. Every `SurveyParticipation` for that cycle whose status is not `RESPONDED` is bulk-updated to `EXPIRED`. This keeps response-rate KPIs consistent and is the signal used by the survey action handler to reject late button clicks (see §7 "Late Button Clicks on an Expired Cycle").
+3. AI #3 (Thematic Grouper) is triggered for projects with fewer than `ANONYMITY_THRESHOLD` responses (see §8).
 
 ---
 
@@ -261,6 +268,37 @@ If a user closes Slack after Step 1 without completing the follow-up:
 - The `SurveyParticipation.status` is already `RESPONDED` — the participation is counted.
 - `PARTIAL` responses are included in the `HappinessSnapshot.response_count` calculation (rating is available).
 - `AIAnalysis` is **not** triggered for `PARTIAL` responses (no text to analyze).
+
+### Post-Completion Messages (out-of-flow DMs)
+
+Once a `SurveyResponse` for the current cycle reaches `conversation_status: COMPLETE`, the bot no longer treats the DM as an open survey conversation. Any further free-text messages the user sends in that thread are handled as follows:
+
+- **No persistence of content.** The message is **never** written to `SurveyResponse`, `AIAnalysis`, or any other table. The existing `SurveyResponse` for the cycle is not modified (rating edits are out of scope for MVP).
+- **No AI calls.** Neither AI #1 (follow-up generator) nor AI #2 (feedback analyzer) is invoked on out-of-flow messages.
+- **Single acknowledgement per cycle.** The bot replies **at most once** per `SurveyCycle` with a short message:
+
+  > _"Thanks! Your survey for this week is already saved. The next one arrives on `<next_dispatch_date>`. For anything urgent, please reach out to your team lead."_
+
+  Subsequent messages in the same cycle are silently ignored (no reply, no state change). An idempotency flag on `SurveyParticipation` (e.g., `post_complete_ack_sent_at`) is used to suppress repeated acknowledgements.
+
+- **Anonymity.** The ignored message content is never logged.
+
+### Late Button Clicks on an Expired Cycle
+
+A user may click a rating button (or the Submit / Skip buttons from Step 1–2) on a DM whose `SurveyCycle` has already transitioned to `status: COMPLETED` (past `period_end`). The bot must reject the interaction gracefully:
+
+- **Cycle validation.** Before writing anything, the action handler loads the `SurveyCycle` via the `SurveyParticipation` referenced by the action's metadata. If `SurveyCycle.status !== ACTIVE`, processing stops immediately.
+- **No `SurveyResponse` created.** The rating is **not** persisted and no `AIAnalysis` is triggered.
+- **`SurveyParticipation` stays as-is.** Its status is not bumped to `RESPONDED`. Cycle-closing logic is responsible for transitioning any non-`RESPONDED` participations to `EXPIRED` at `period_end` (see §6).
+- **UX — edit the original message.** The bot uses the action's `response_url` to replace the Block Kit message with plain text:
+
+  > _"This survey has closed. The next one arrives on `<next_dispatch_date>`."_
+
+  No new DM is sent.
+
+- **Idempotent.** Repeated clicks on the same closed message pass the same validation and produce the same edited message — no duplicate state, no error surfaced to the user.
+- **Idempotency for active cycles.** If a user clicks a rating button twice on an **active** cycle (e.g., button 3 after already selecting button 2), the first response wins. The handler checks for an existing `SurveyResponse` for the `SurveyParticipation` and returns a short confirmation instead of creating or mutating a second record.
+- **Anonymity.** The rejected click is never logged with its `slack_user_id`, and no content is stored.
 
 ---
 
@@ -437,7 +475,7 @@ export class SlackDmProcessor {
 - [ ] Create `apps/api/src/modules/slack/slack.module.ts` — register Bolt `App` with HTTP receiver and custom `installationStore`.
 - [ ] Implement `SlackInstallationStore` — reads/writes `SlackInstallation` records via Prisma; encrypts/decrypts `bot_token`.
 - [ ] Implement `SlackOAuthController` — `GET /slack/oauth/install` (state generation + redirect) and `GET /slack/oauth/callback` (code exchange).
-- [ ] Implement `SlackOAuthService` — `oauth.v2.access` call, `SlackInstallation` upsert, `Project.slack_workspace_id` update.
+- [ ] Implement `SlackOAuthService` — `oauth.v2.access` call and `SlackInstallation` upsert.
 - [ ] Implement user auto-sync via `users.list` — match email → `ProjectMembership.slack_user_id`; expose as on-demand "Sync Users" endpoint.
 - [ ] Add **"Connect Slack"** button to Project Settings page in `apps/web`.
 - [ ] Implement `SlackDmProcessor` — `send-survey-dm` and `send-feedback-dm` handlers with `concurrency: 1`.
