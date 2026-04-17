@@ -1,7 +1,7 @@
 'use client';
 
 import { CreateTeamDialog } from '@/components/teams/CreateTeamDialog';
-import { TeamsTableColumns } from '@/components/teams/TeamsTableColumns';
+import { getTeamsTableColumns } from '@/components/teams/teamsTableColumns';
 import { DataTable } from '@/components/ui/data-table';
 import { Pagination } from '@/components/ui/pagination';
 import { useDataTableState } from '@/hooks/useDataTableState';
@@ -20,7 +20,7 @@ export default function TeamsPage() {
     sortDir: tableState.sortDir,
   });
 
-  const columns = TeamsTableColumns();
+  const columns = getTeamsTableColumns();
 
   if (isLoading) {
     return (

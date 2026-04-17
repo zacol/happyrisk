@@ -6,9 +6,7 @@ import { ArchiveIcon, MoreHorizontal, Pencil } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { DataTableColumnDef } from '@/components/ui/data-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,45 +18,7 @@ import { useArchiveTeam } from '@/hooks/useTeams';
 
 import { RenameTeamDialog } from './RenameTeamDialog';
 
-export function TeamsTableColumns(): DataTableColumnDef<Team>[] {
-  return [
-    {
-      accessorKey: 'name',
-      header: 'Name',
-      cell: ({ row }) => {
-        const name = row.getValue<string>('name');
-
-        return <span className="font-medium">{name}</span>;
-      },
-    },
-    {
-      accessorKey: 'isActive',
-      header: 'Status',
-      cell: ({ row }) => {
-        const isActive = row.getValue<boolean>('isActive');
-
-        return (
-          <Badge variant={isActive ? 'outline' : 'secondary'}>
-            {isActive ? 'Active' : 'Archived'}
-          </Badge>
-        );
-      },
-    },
-    {
-      id: 'actions',
-      header: '',
-      fitToContent: true,
-      cell: ({ row }) => {
-        const team = row.original;
-
-        return <TeamActions team={team} />;
-      },
-      enableSorting: false,
-    },
-  ];
-}
-
-function TeamActions({ team }: { team: Team }) {
+export function TeamActionsCell({ team }: { team: Team }) {
   const [renameOpen, setRenameOpen] = useState(false);
   const archiveTeam = useArchiveTeam();
 

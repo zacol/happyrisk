@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  DEFAULT_PAGE_INDEX,
-  DEFAULT_PAGE_SIZE,
-  type ListResponse,
-  type Team,
-  type TeamCreate,
-  type TeamUpdate,
-} from '@happyrisk/core';
+import type { ListResponse, Team, TeamCreate, TeamUpdate } from '@happyrisk/core';
 
 import {
   useMutation,
@@ -36,13 +29,11 @@ export function useTeams(
   params: UseTeamsParams = {},
   options?: UseTeamsOptions,
 ): UseQueryResult<ListResponse<Team>, Error> {
-  const { pageIndex = DEFAULT_PAGE_INDEX, pageSize = DEFAULT_PAGE_SIZE, sortBy, sortDir } = params;
-
   return useQuery<ListResponse<Team>, Error>({
-    queryKey: [...TEAMS_KEY, { pageIndex, pageSize, sortBy, sortDir }],
+    queryKey: [...TEAMS_KEY, params],
     queryFn: async () => {
       const { data } = await api.get<ListResponse<Team>>('/teams', {
-        params: { pageIndex, pageSize, sortBy, sortDir },
+        params,
       });
 
       return data;

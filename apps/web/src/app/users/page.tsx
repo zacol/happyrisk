@@ -3,7 +3,7 @@
 import { DataTable } from '@/components/ui/data-table';
 import { Pagination } from '@/components/ui/pagination';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
-import { UsersTableColumns } from '@/components/users/UsersTableColumns';
+import { getUsersTableColumns } from '@/components/users/usersTableColumns';
 import { useDataTableState } from '@/hooks/useDataTableState';
 import { useUsers } from '@/hooks/useUsers';
 
@@ -20,7 +20,7 @@ export default function UsersPage() {
     sortDir: tableState.sortDir,
   });
 
-  const columns = UsersTableColumns();
+  const columns = getUsersTableColumns();
 
   if (isLoading) {
     return (

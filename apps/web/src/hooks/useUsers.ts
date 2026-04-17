@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  DEFAULT_PAGE_INDEX,
-  DEFAULT_PAGE_SIZE,
-  type ListResponse,
-  type User,
-  type UserCreate,
-  type UserUpdate,
-} from '@happyrisk/core';
+import type { ListResponse, User, UserCreate, UserUpdate } from '@happyrisk/core';
 
 import {
   useMutation,
@@ -36,13 +29,11 @@ export function useUsers(
   params: UseUsersParams = {},
   options?: UseUsersOptions,
 ): UseQueryResult<ListResponse<User>, Error> {
-  const { pageIndex = DEFAULT_PAGE_INDEX, pageSize = DEFAULT_PAGE_SIZE, sortBy, sortDir } = params;
-
   return useQuery<ListResponse<User>, Error>({
-    queryKey: [...USERS_KEY, { pageIndex, pageSize, sortBy, sortDir }],
+    queryKey: [...USERS_KEY, params],
     queryFn: async () => {
       const { data } = await api.get<ListResponse<User>>('/users', {
-        params: { pageIndex, pageSize, sortBy, sortDir },
+        params,
       });
 
       return data;

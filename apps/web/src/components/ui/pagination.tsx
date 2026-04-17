@@ -34,8 +34,9 @@ function Pagination({
   className,
 }: PaginationProps) {
   const totalPages = Math.ceil(total / pageSize);
-  const startItem = pageIndex * pageSize + 1;
-  const endItem = Math.min((pageIndex + 1) * pageSize, total);
+  const safePageIndex = Math.max(0, Math.min(pageIndex, totalPages - 1));
+  const startItem = safePageIndex * pageSize + 1;
+  const endItem = Math.min((safePageIndex + 1) * pageSize, total);
 
   return (
     <div className={cn('flex items-center justify-between gap-4', className)}>
@@ -67,8 +68,8 @@ function Pagination({
           <Button
             variant="outline"
             size="sm"
-            disabled={pageIndex <= 0}
-            onClick={() => onPageChange(pageIndex - 1)}
+            disabled={safePageIndex <= 0}
+            onClick={() => onPageChange(safePageIndex - 1)}
             aria-label="Previous page"
           >
             <ChevronLeft className="mr-1 h-4 w-4" />
@@ -78,8 +79,8 @@ function Pagination({
           <Button
             variant="outline"
             size="sm"
-            disabled={pageIndex >= totalPages - 1}
-            onClick={() => onPageChange(pageIndex + 1)}
+            disabled={safePageIndex >= totalPages - 1}
+            onClick={() => onPageChange(safePageIndex + 1)}
             aria-label="Next page"
           >
             Next
