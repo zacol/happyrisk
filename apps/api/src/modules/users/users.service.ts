@@ -104,6 +104,27 @@ export class UsersService {
     return user;
   }
 
+  async getMemberships(id: string) {
+    await this.findOne(id);
+
+    return this.prisma.teamMembership.findMany({
+      where: { userId: id },
+      select: {
+        id: true,
+        teamId: true,
+        joinedAt: true,
+        team: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+          },
+        },
+      },
+      orderBy: { joinedAt: 'asc' },
+    });
+  }
+
   async changeRole(id: string, role: ChangeRole['role']) {
     await this.findOne(id);
 

@@ -1,7 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -13,7 +16,7 @@ import { Roles } from '@/modules/auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt.guard';
 import { RolesGuard } from '@/modules/auth/guards/roles.guard';
 
-import { CreateTeamDto, UpdateTeamDto } from './teams.dto';
+import { AddMemberDto, CreateTeamDto, UpdateTeamDto } from './teams.dto';
 import { TeamsService } from './teams.service';
 
 @Controller('teams')
@@ -45,5 +48,19 @@ export class TeamsController {
   @Patch(':id/archive')
   archive(@Param('id', ParseUUIDPipe) id: string) {
     return this.teamsService.archive(id);
+  }
+
+  @Post(':id/members')
+  addMember(@Param('id', ParseUUIDPipe) id: string, @Body() body: AddMemberDto) {
+    return this.teamsService.addMember(id, body);
+  }
+
+  @Delete(':id/members/:userId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  removeMember(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
+  ) {
+    return this.teamsService.removeMember(id, userId);
   }
 }

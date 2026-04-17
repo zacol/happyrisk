@@ -5,3 +5,14 @@ export interface Team {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UserTeam {
+  id: string;
+  teamId: string;
+  joinedAt: string;
+  team: {
+    id: string;
+    name: string;
+    isActive: boolean;
+  };
+}

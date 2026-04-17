@@ -1,6 +1,6 @@
 'use client';
 
-import type { Team, TeamCreate, TeamUpdate } from '@happyrisk/core';
+import type { Team, TeamCreate, TeamMemberAdd, TeamUpdate, UserTeam } from '@happyrisk/core';
 
 import {
   useMutation,
@@ -92,6 +92,73 @@ export function useArchiveTeam(
     ...options,
     onSuccess: (...args: Parameters<NonNullable<UseArchiveTeamOptions['onSuccess']>>) => {
       void queryClient.invalidateQueries({ queryKey: TEAMS_KEY });
+      options?.onSuccess?.(...args);
+    },
+  });
+}
+
+export const userTeamsKey = (userId: string) => [...TEAMS_KEY, 'memberships', userId] as const;
+
+type UseUserTeamsOptions = Omit<UseQueryOptions<UserTeam[], Error>, 'queryKey' | 'queryFn'>;
+
+export function useUserTeams(
+  userId: string,
+  options?: UseUserTeamsOptions,
+): UseQueryResult<UserTeam[], Error> {
+  return useQuery<UserTeam[], Error>({
+    queryKey: userTeamsKey(userId),
+    queryFn: async () => {
+      const { data } = await api.get<UserTeam[]>(`/users/${userId}/memberships`);
+
+      return data;
+    },
+    ...options,
+  });
+}
+
+type AddTeamMemberVariables = { teamId: string } & TeamMemberAdd;
+type UseAddTeamMemberOptions = Omit<
+  UseMutationOptions<void, Error, AddTeamMemberVariables>,
+  'mutationFn'
+>;
+
+export function useAddTeamMember(
+  userId: string,
+  options?: UseAddTeamMemberOptions,
+): UseMutationResult<void, Error, AddTeamMemberVariables> {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, AddTeamMemberVariables>({
+    mutationFn: async ({ teamId, ...payload }) => {
+      await api.post(`/teams/${teamId}/members`, payload);
+    },
+    ...options,
+    onSuccess: (...args: Parameters<NonNullable<UseAddTeamMemberOptions['onSuccess']>>) => {
+      void queryClient.invalidateQueries({ queryKey: userTeamsKey(userId) });
+      options?.onSuccess?.(...args);
+    },
+  });
+}
+
+type RemoveTeamMemberVariables = { teamId: string; userId: string };
+type UseRemoveTeamMemberOptions = Omit<
+  UseMutationOptions<void, Error, RemoveTeamMemberVariables>,
+  'mutationFn'
+>;
+
+export function useRemoveTeamMember(
+  userId: string,
+  options?: UseRemoveTeamMemberOptions,
+): UseMutationResult<void, Error, RemoveTeamMemberVariables> {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, RemoveTeamMemberVariables>({
+    mutationFn: async ({ teamId, userId: memberId }) => {
+      await api.delete(`/teams/${teamId}/members/${memberId}`);
+    },
+    ...options,
+    onSuccess: (...args: Parameters<NonNullable<UseRemoveTeamMemberOptions['onSuccess']>>) => {
+      void queryClient.invalidateQueries({ queryKey: userTeamsKey(userId) });
       options?.onSuccess?.(...args);
     },
   });
