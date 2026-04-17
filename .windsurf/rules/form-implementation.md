@@ -91,15 +91,7 @@ For non-standard or highly custom inputs (e.g., file upload, rich text editor, c
   noValidate
   className="grid gap-4 py-4"
 >
-  <div className="grid gap-2">
-    <Label htmlFor="name">Name *</Label>
-    <Input id="name" placeholder="e.g. Frontend" {...register('name')} />
-    {errors.name && (
-      <p className="text-sm text-destructive" role="alert">
-        {errors.name.message}
-      </p>
-    )}
-  </div>
+  <TextField name="name" label="Name *" placeholder="e.g. Frontend" />
 
   <Button type="submit" disabled={mutation.isPending}>
     {mutation.isPending ? 'Creating...' : 'Create'}
