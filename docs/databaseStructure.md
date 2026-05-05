@@ -128,15 +128,16 @@ Join table linking users to specific projects they are working on.
 
 Configurable survey schedule per project (US 5.2).
 
-| Column        | Type          | Constraints                         | Description                                                     |
-| :------------ | :------------ | :---------------------------------- | :-------------------------------------------------------------- |
-| `id`          | `UUID`        | PK, default `uuid()`                | Unique identifier.                                              |
-| `project_id`  | `UUID`        | FK → `Project.id`, NOT NULL, UNIQUE | One config per project.                                         |
-| `frequency`   | `ENUM`        | NOT NULL, default `WEEKLY`          | `WEEKLY` or `BIWEEKLY`.                                         |
-| `day_of_week` | `SMALLINT`    | NOT NULL, default `5`               | ISO day (1=Mon, 7=Sun). Default: Friday.                        |
-| `time_utc`    | `VARCHAR(5)`  | NOT NULL, default `'14:00'`         | Time to send the DM (UTC) in "HH:MM" format. Validated via Zod. |
-| `is_active`   | `BOOLEAN`     | NOT NULL, default `true`            | Enable/disable surveys for this project.                        |
-| `updated_at`  | `TIMESTAMPTZ` | NOT NULL, default `now()`           | Last update timestamp (`@updatedAt`).                           |
+| Column        | Type          | Constraints                         | Description                                                                                                                                                                                       |
+| :------------ | :------------ | :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`          | `UUID`        | PK, default `uuid()`                | Unique identifier.                                                                                                                                                                                |
+| `project_id`  | `UUID`        | FK → `Project.id`, NOT NULL, UNIQUE | One config per project.                                                                                                                                                                           |
+| `frequency`   | `ENUM`        | NOT NULL, default `WEEKLY`          | `WEEKLY` or `BIWEEKLY`.                                                                                                                                                                           |
+| `day_of_week` | `SMALLINT`    | NOT NULL, default `5`               | ISO day (1=Mon, 7=Sun). Default: Friday.                                                                                                                                                          |
+| `time_utc`    | `VARCHAR(5)`  | NOT NULL, default `'14:00'`         | Time to send the DM (UTC) in "HH:MM" format. Validated via Zod.                                                                                                                                   |
+| `duration`    | `SMALLINT`    | NOT NULL, default `3`               | Survey collection window in days (1–7). `period_end = period_start + duration`. Must be ≤ 7 so that a `WEEKLY` cycle closes before the next one starts. Validated via Zod (`durationDaysSchema`). |
+| `is_active`   | `BOOLEAN`     | NOT NULL, default `true`            | Enable/disable surveys for this project.                                                                                                                                                          |
+| `updated_at`  | `TIMESTAMPTZ` | NOT NULL, default `now()`           | Last update timestamp (`@updatedAt`).                                                                                                                                                             |
 
 ---
 
@@ -144,14 +145,14 @@ Configurable survey schedule per project (US 5.2).
 
 Represents a single survey period (e.g., "Week of 2026-03-16") for a project.
 
-| Column         | Type          | Constraints                 | Description                                                        |
-| :------------- | :------------ | :-------------------------- | :----------------------------------------------------------------- |
-| `id`           | `UUID`        | PK, default `uuid()`        | Unique identifier.                                                 |
-| `project_id`   | `UUID`        | FK → `Project.id`, NOT NULL | The project this cycle belongs to.                                 |
-| `period_start` | `DATE`        | NOT NULL                    | Start date of the survey period.                                   |
-| `period_end`   | `DATE`        | NOT NULL                    | End date of the survey period. Must equal `period_start + 3 days`. |
-| `status`       | `ENUM`        | NOT NULL, default `ACTIVE`  | `ACTIVE`, `COMPLETED`.                                             |
-| `created_at`   | `TIMESTAMPTZ` | NOT NULL, default `now()`   | Record creation timestamp.                                         |
+| Column         | Type          | Constraints                 | Description                                                                        |
+| :------------- | :------------ | :-------------------------- | :--------------------------------------------------------------------------------- |
+| `id`           | `UUID`        | PK, default `uuid()`        | Unique identifier.                                                                 |
+| `project_id`   | `UUID`        | FK → `Project.id`, NOT NULL | The project this cycle belongs to.                                                 |
+| `period_start` | `DATE`        | NOT NULL                    | Start date of the survey period.                                                   |
+| `period_end`   | `DATE`        | NOT NULL                    | End date of the survey period. Equals `period_start + SurveyConfig.duration` days. |
+| `status`       | `ENUM`        | NOT NULL, default `ACTIVE`  | `ACTIVE`, `COMPLETED`.                                                             |
+| `created_at`   | `TIMESTAMPTZ` | NOT NULL, default `now()`   | Record creation timestamp.                                                         |
 
 **Indexes:** `project_id`, (`project_id`, `period_start`)
 

@@ -235,6 +235,7 @@ model SurveyConfig {
   frequency SurveyFrequency @default(WEEKLY)
   dayOfWeek Int             @default(5) @map("day_of_week") @db.SmallInt
   timeUtc   String          @default("14:00") @map("time_utc") @db.VarChar(5)
+  duration  Int             @default(3) @db.SmallInt
   isActive  Boolean         @default(true) @map("is_active")
 
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz

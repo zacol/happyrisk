@@ -178,13 +178,14 @@ Each project has a `SurveyConfig` record that defines:
 - `frequency`: `WEEKLY` or `BIWEEKLY`
 - `day_of_week`: ISO day number (1 = Monday, 7 = Sunday). Default: `5` (Friday).
 - `time_utc`: Dispatch time in `HH:MM` format (UTC). Default: `14:00`.
+- `duration`: Collection window in days (1–7). Default: `3`. `period_end = period_start + duration`. Must be ≤ 7 to ensure a `WEEKLY` cycle closes before the next one starts.
 - `is_active`: Whether automated surveys are enabled for this project.
 
 ### Dispatch Steps
 
 1. **Cron fires** (evaluated every minute or every relevant time slot).
 2. Find all active `SurveyConfig` records where the current UTC time matches `day_of_week` + `time_utc`.
-3. For each matching project, create a new `SurveyCycle` record (`status: ACTIVE`, `period_start` = current UTC date, `period_end` = `period_start + 3 days`).
+3. For each matching project, create a new `SurveyCycle` record (`status: ACTIVE`, `period_start` = current UTC date, `period_end` = `period_start + SurveyConfig.duration` days).
 4. Fetch all active `ProjectMembership` records with a non-null `slack_user_id` for the project.
 5. For each member, create a `SurveyParticipation` record (`status: QUEUED`) and enqueue a `send-survey-dm` job in the BullMQ queue (see §12).
 6. The queue processor updates `SurveyParticipation.status` to `SENT` and sets `sent_at` after a successful `chat.postMessage` call (see §12).
