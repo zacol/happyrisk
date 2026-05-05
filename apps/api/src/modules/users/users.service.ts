@@ -1,7 +1,8 @@
-import type { ChangeRole, UserCreate, UserUpdate } from '@happyrisk/core';
+import { type ChangeRole, type ListQuery, type UserCreate, type UserUpdate } from '@happyrisk/core';
 
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 
+import { createOrderBy } from '@/common/utils/list.utils';
 import { Prisma } from '@/generated/prisma/client';
 import { AuthService } from '@/modules/auth/auth.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
@@ -41,11 +42,45 @@ export class UsersService {
     }
   }
 
-  async findAll() {
-    return this.prisma.user.findMany({
-      select: this.userSelect,
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(query: ListQuery) {
+    const { pageIndex, pageSize, sortBy, sortDir } = query;
+    const skip = pageIndex * pageSize;
+
+    const { orderBy, sortMeta } = this.buildOrderBy(sortBy, sortDir);
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.user.count(),
+      this.prisma.user.findMany({
+        select: this.userSelect,
+        orderBy,
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      meta: {
+        pagination: { pageIndex, pageSize, total },
+        ...(sortMeta && { sort: sortMeta }),
+      },
+      items,
+    };
+  }
+
+  private buildOrderBy(
+    sortBy: string | undefined,
+    sortDir: 'asc' | 'desc' | undefined,
+  ): {
+    orderBy: Prisma.UserOrderByWithRelationInput;
+    sortMeta?: { sortBy: string; sortDir: 'asc' | 'desc' };
+  } {
+    const validFields = ['name', 'email', 'role', 'isActive', 'createdAt'] as const;
+    const result = createOrderBy(sortBy, sortDir, validFields, 'createdAt');
+
+    return {
+      orderBy: result.orderBy as Prisma.UserOrderByWithRelationInput,
+      sortMeta: result.sortMeta,
+    };
   }
 
   async findOne(id: string) {

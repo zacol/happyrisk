@@ -6,9 +6,11 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
+import { ListQueryDto } from '@/common/dto/list-query.dto';
 import { Roles } from '@/modules/auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt.guard';
 import { RolesGuard } from '@/modules/auth/guards/roles.guard';
@@ -28,8 +30,8 @@ export class UsersController {
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  findAll(@Query() query: ListQueryDto) {
+    return this.usersService.findAll(query);
   }
 
   @Get(':id')

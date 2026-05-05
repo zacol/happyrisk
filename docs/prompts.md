@@ -5,6 +5,7 @@ This document contains the core system prompts for the AI models integrated into
 ---
 
 ### 1. AI #1: Follow-up Generator (The Conversation Partner)
+
 **Location:** Triggered immediately after a user provides their initial rating (1-5) and a brief comment on Slack.
 
 **Goal:** Extract the "why" behind the score in a single, non-intrusive interaction.
@@ -26,6 +27,7 @@ Input Data:
 ```
 
 ### 2. AI #2: Feedback Analyzer (The Data Scientist)
+
 **Location:** Triggered after the Slack conversation ends. The output is saved to the PostgreSQL database to populate the Dashboard and Risk Registry.
 
 **Goal:** Transform raw text into structured, actionable data.
@@ -66,6 +68,7 @@ Transcript: {full_transcript}
 ```
 
 ### 3. AI #3: Thematic Grouper (The Privacy Layer)
+
 **Location:** Used in the Manager Dashboard for small teams (n < 5) to protect anonymity.
 
 **Goal:** Paraphrase and aggregate feedback to hide individual writing styles.
@@ -88,6 +91,7 @@ Output:
 ```
 
 ### 4. AI #4: Action Recommender (The Strategic Consultant)
+
 **Location:** Monthly/Quarterly reporting module (V3 Roadmap).
 
 **Goal:** Provide high-level strategic advice based on long-term trends and benchmarks.
@@ -107,4 +111,3 @@ Provide 2-3 professional recommendations focused on systemic changes (e.g., "Imp
 
 Tone: Direct, analytical, and supportive.
 ```
-

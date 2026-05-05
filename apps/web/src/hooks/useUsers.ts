@@ -1,6 +1,6 @@
 'use client';
 
-import type { User, UserCreate, UserUpdate } from '@happyrisk/core';
+import type { ListResponse, User, UserCreate, UserUpdate } from '@happyrisk/core';
 
 import {
   useMutation,
@@ -16,13 +16,25 @@ import { api } from '@/lib/api';
 
 export const USERS_KEY = ['users'] as const;
 
-type UseUsersOptions = Omit<UseQueryOptions<User[], Error>, 'queryKey' | 'queryFn'>;
+interface UseUsersParams {
+  pageIndex?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+}
 
-export function useUsers(options?: UseUsersOptions): UseQueryResult<User[], Error> {
-  return useQuery<User[], Error>({
-    queryKey: USERS_KEY,
+type UseUsersOptions = Omit<UseQueryOptions<ListResponse<User>, Error>, 'queryKey' | 'queryFn'>;
+
+export function useUsers(
+  params: UseUsersParams = {},
+  options?: UseUsersOptions,
+): UseQueryResult<ListResponse<User>, Error> {
+  return useQuery<ListResponse<User>, Error>({
+    queryKey: [...USERS_KEY, params],
     queryFn: async () => {
-      const { data } = await api.get<User[]>('/users');
+      const { data } = await api.get<ListResponse<User>>('/users', {
+        params,
+      });
 
       return data;
     },

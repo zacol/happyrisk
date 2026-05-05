@@ -1,11 +1,31 @@
 'use client';
 
+import { DataTable } from '@/components/ui/data-table';
+import { Pagination } from '@/components/ui/pagination';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
-import { UsersTable } from '@/components/users/UsersTable';
+import { getUsersTableColumns } from '@/components/users/usersTableColumns';
+import { useDataTableState } from '@/hooks/useDataTableState';
 import { useUsers } from '@/hooks/useUsers';
 
 export default function UsersPage() {
-  const { data: users, isLoading, isError } = useUsers();
+  const tableState = useDataTableState({
+    defaultSortBy: 'name',
+    defaultSortDir: 'asc',
+  });
+
+  const { data, isLoading, isError } = useUsers(
+    {
+      pageIndex: tableState.pageIndex,
+      pageSize: tableState.pageSize,
+      sortBy: tableState.sortBy,
+      sortDir: tableState.sortDir,
+    },
+    {
+      placeholderData: (previousData) => previousData,
+    },
+  );
+
+  const columns = getUsersTableColumns();
 
   if (isLoading) {
     return (
@@ -32,7 +52,33 @@ export default function UsersPage() {
         </div>
         <CreateUserDialog />
       </div>
-      <UsersTable users={users ?? []} />
+
+      <DataTable
+        columns={columns}
+        data={data?.items ?? []}
+        totalRows={data?.meta.pagination.total ?? 0}
+        sorting={tableState.sorting}
+        pagination={tableState.pagination}
+        onSortingChange={tableState.onSortingChange}
+        onPaginationChange={tableState.onPaginationChange}
+        emptyMessage="No users found."
+      />
+
+      {data && (
+        <Pagination
+          pageIndex={tableState.pageIndex}
+          pageSize={tableState.pageSize}
+          total={data.meta.pagination.total}
+          onPageChange={(newPage) =>
+            tableState.onPaginationChange((old) => ({ ...old, pageIndex: newPage }))
+          }
+          onPageSizeChange={(newSize) =>
+            tableState.onPaginationChange((old) => ({ ...old, pageSize: newSize, pageIndex: 0 }))
+          }
+          itemName="users"
+          className="mt-4"
+        />
+      )}
     </div>
   );
 }

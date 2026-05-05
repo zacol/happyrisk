@@ -1,7 +1,9 @@
-import type { TeamCreate, TeamUpdate } from '@happyrisk/core';
+import { type ListQuery, type TeamCreate, type TeamUpdate } from '@happyrisk/core';
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 
+import { createOrderBy } from '@/common/utils/list.utils';
+import { Prisma } from '@/generated/prisma/client';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 
 @Injectable()
@@ -15,11 +17,45 @@ export class TeamsService {
     });
   }
 
-  async findAll() {
-    return this.prisma.team.findMany({
-      select: this.teamSelect,
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(query: ListQuery) {
+    const { pageIndex, pageSize, sortBy, sortDir } = query;
+    const skip = pageIndex * pageSize;
+
+    const { orderBy, sortMeta } = this.buildOrderBy(sortBy, sortDir);
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.team.count(),
+      this.prisma.team.findMany({
+        select: this.teamSelect,
+        orderBy,
+        skip,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      meta: {
+        pagination: { pageIndex, pageSize, total },
+        ...(sortMeta && { sort: sortMeta }),
+      },
+      items,
+    };
+  }
+
+  private buildOrderBy(
+    sortBy: string | undefined,
+    sortDir: 'asc' | 'desc' | undefined,
+  ): {
+    orderBy: Prisma.TeamOrderByWithRelationInput;
+    sortMeta?: { sortBy: string; sortDir: 'asc' | 'desc' };
+  } {
+    const validFields = ['name', 'isActive', 'createdAt'] as const;
+    const result = createOrderBy(sortBy, sortDir, validFields, 'createdAt');
+
+    return {
+      orderBy: result.orderBy as Prisma.TeamOrderByWithRelationInput,
+      sortMeta: result.sortMeta,
+    };
   }
 
   async findOne(id: string) {

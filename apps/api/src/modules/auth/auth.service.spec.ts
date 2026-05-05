@@ -60,7 +60,10 @@ describe('AuthService', () => {
     });
 
     mockConfigService.getOrThrow.mockImplementation((key: string) => {
-      const config: Record<string, string> = { JWT_SECRET: 'test-secret' };
+      const config: Record<string, string> = {
+        JWT_SECRET: 'test-secret',
+        JWT_REFRESH_EXPIRES_IN: '7d',
+      };
 
       return config[key];
     });

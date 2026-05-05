@@ -129,29 +129,83 @@ Every list endpoint that may return an unbounded result set **must** support pag
 
 | Parameter       | Format                  | Description                               |
 | --------------- | ----------------------- | ----------------------------------------- |
-| `page`          | `page=1`                | Page number (1-indexed)                   |
-| `limit`         | `limit=20`              | Results per page                          |
+| `pageIndex`     | `pageIndex=0`           | Page index (0-indexed)                    |
+| `pageSize`      | `pageSize=20`           | Results per page                          |
 | `sort[field]`   | `sort[createdAt]=desc`  | Sort by field, direction: `asc` or `desc` |
 | `filter[field]` | `filter[status]=ACTIVE` | Filter by field value                     |
+
+**Advanced Filter Operators (when applicable)**
+
+| Operator  | SQL Equivalent | Example                             |
+| --------- | -------------- | ----------------------------------- |
+| `eq`      | `=`            | `filter[status][eq]=active`         |
+| `neq`     | `<>`           | `filter[status][neq]=deleted`       |
+| `lt`      | `<`            | `filter[age][lt]=30`                |
+| `lte`     | `<=`           | `filter[age][lte]=30`               |
+| `gt`      | `>`            | `filter[age][gt]=18`                |
+| `gte`     | `>=`           | `filter[age][gte]=18`               |
+| `include` | `LIKE %val%`   | `filter[name][include]=john`        |
+| `in`      | `IN (...)`     | `filter[status][in]=active,pending` |
+
+**Filter Behavior**
+
+- Same field, multiple values → interpreted as `OR`:
+
+  ```text
+  ?filter[firstName]=Ewa&filter[firstName]=Adam
+  → WHERE (firstName = 'Ewa' OR firstName = 'Adam')
+  ```
+
+- Different fields → interpreted as `AND`:
+
+  ```text
+  ?filter[firstName]=Ewa&filter[lastName]=Kowalska
+  → WHERE (firstName = 'Ewa' AND lastName = 'Kowalska')
+  ```
+
+- LIKE search → use URL-encoded `%25` suffix:
+  ```text
+  ?filter[lastName]=Now%25
+  → WHERE lastName LIKE 'Now%'
+  ```
 
 **Response format:**
 
 ```json
 {
-  "data": [{ "..." }],
   "meta": {
-    "page": 1,
-    "limit": 20,
-    "total": 57,
-    "totalPages": 3
-  }
+    "pagination": {
+      "pageIndex": 0,
+      "pageSize": 10,
+      "total": 57
+    }
+  },
+  "items": [{ "..." }]
+}
+```
+
+When `filter`, `sort`, or `search` parameters are applied, they are included in `meta` to echo back what was used:
+
+```json
+{
+  "meta": {
+    "pagination": {
+      "pageIndex": 0,
+      "pageSize": 10,
+      "total": 12
+    },
+    "filter": { "status": "active" },
+    "sort": { "sortBy": "isActive", "sortDir": "desc" },
+    "search": "john"
+  },
+  "items": [{ "..." }]
 }
 ```
 
 **Rules:**
 
-- Define a shared `PaginationQueryDto` (Zod schema in `packages/core`) for `page` and `limit`.
-- Default `limit` = 20. Maximum `limit` = 100 — cap silently.
+- Define a shared `PaginationQueryDto` (Zod schema in `packages/core`) for `pageIndex` and `pageSize`.
+- Default `pageSize` = 20. Maximum `pageSize` = 100 — cap silently.
 - Invalid filter or sort field names are silently ignored (do not apply, do not error).
 - Use Prisma `skip`/`take` for pagination and `orderBy` for sorting.
 - Use `prisma.$transaction([countQuery, dataQuery])` to get total count and data in a single round-trip when both are needed.
