@@ -442,7 +442,5 @@ model SlackInstallation {
   project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   installedBy User?   @relation("SlackInstalledBy", fields: [installedById], references: [id], onDelete: SetNull)
 
-  @@index([projectId])
-  @@index([workspaceId])
   @@map("slack_installations")
 }

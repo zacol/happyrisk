@@ -19,12 +19,6 @@ CREATE UNIQUE INDEX "slack_installations_project_id_key" ON "slack_installations
 -- CreateIndex
 CREATE UNIQUE INDEX "slack_installations_workspace_id_key" ON "slack_installations"("workspace_id");
 
--- CreateIndex
-CREATE INDEX "slack_installations_project_id_idx" ON "slack_installations"("project_id");
-
--- CreateIndex
-CREATE INDEX "slack_installations_workspace_id_idx" ON "slack_installations"("workspace_id");
-
 -- AddForeignKey
 ALTER TABLE "slack_installations" ADD CONSTRAINT "slack_installations_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
