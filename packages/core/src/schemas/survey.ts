@@ -16,11 +16,18 @@ export const dayOfWeekSchema = z
   .min(1, 'ISO day must be >= 1 (Monday)')
   .max(7, 'ISO day must be <= 7 (Sunday)');
 
+export const durationDaysSchema = z
+  .number()
+  .int()
+  .min(1, 'Duration must be at least 1 day')
+  .max(7, 'Duration cannot exceed 7 days (one week)');
+
 export const surveyConfigCreateSchema = z.object({
   projectId: z.uuid(),
   frequency: surveyFrequencySchema.default('WEEKLY'),
   dayOfWeek: dayOfWeekSchema.default(5),
   timeUtc: timeUtcSchema.default('14:00'),
+  duration: durationDaysSchema.default(3),
   isActive: z.boolean().default(true),
 });
 

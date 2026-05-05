@@ -119,6 +119,7 @@ model User {
   surveyParticipations SurveyParticipation[]
   createdRisks         Risk[]                @relation("RiskCreatedBy")
   riskActions          RiskAction[]
+  slackInstallations   SlackInstallation[]   @relation("SlackInstalledBy")
 
   @@index([email])
   @@map("users")
@@ -188,10 +189,9 @@ model TeamMembership {
 }
 
 model Project {
-  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String  @db.VarChar(255)
-  slackWorkspaceId String? @unique @map("slack_workspace_id") @db.VarChar(64)
-  isActive         Boolean @default(true) @map("is_active")
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name     String  @db.VarChar(255)
+  isActive Boolean @default(true) @map("is_active")
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
@@ -203,6 +203,7 @@ model Project {
   risks              Risk[]
   happinessSnapshots HappinessSnapshot[]
   thematicSummaries  ThematicSummary[]
+  slackInstallation  SlackInstallation?
 
   @@map("projects")
 }
@@ -234,6 +235,7 @@ model SurveyConfig {
   frequency SurveyFrequency @default(WEEKLY)
   dayOfWeek Int             @default(5) @map("day_of_week") @db.SmallInt
   timeUtc   String          @default("14:00") @map("time_utc") @db.VarChar(5)
+  duration  Int             @default(3) @db.SmallInt
   isActive  Boolean         @default(true) @map("is_active")
 
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
@@ -417,4 +419,28 @@ model ThematicSummary {
 
   @@unique([projectId, surveyCycleId])
   @@map("thematic_summaries")
+}
+
+// ─────────────────────────────────────────────
+// Slack Integration
+// ─────────────────────────────────────────────
+
+/// Stores the result of the "Connect Slack" OAuth installation for a given project.
+/// One record per project; `bot_token` must be encrypted at rest.
+model SlackInstallation {
+  id            String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  projectId     String  @unique @map("project_id") @db.Uuid
+  workspaceId   String  @unique @map("workspace_id") @db.VarChar(64)
+  workspaceName String? @map("workspace_name") @db.VarChar(255)
+  botToken      String  @map("bot_token")
+  botUserId     String  @map("bot_user_id") @db.VarChar(64)
+  installedById String? @map("installed_by_id") @db.Uuid
+
+  installedAt DateTime @default(now()) @map("installed_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  installedBy User?   @relation("SlackInstalledBy", fields: [installedById], references: [id], onDelete: SetNull)
+
+  @@map("slack_installations")
 }

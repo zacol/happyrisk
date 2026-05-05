@@ -15,6 +15,8 @@ This document outlines the functional requirements for HappyRisk AI from the per
 - **AC 1:** Bot triggers a Block Kit message with 1–5 rating buttons.
 - **AC 2:** After selecting a rating, the bot replaces the buttons with a confirmation and an optional free-text comment field (Submit / Skip).
 - **AC 3:** A `SurveyResponse` with `conversation_status: PARTIAL` is persisted after the user submits or skips the initial comment, preserving the rating even if the follow-up is never completed.
+- **AC 4:** If the user clicks a rating button after the `SurveyCycle` has transitioned to `COMPLETED` (late click), no `SurveyResponse` is created, `SurveyParticipation.status` is not modified, and the original Block Kit message is replaced via `response_url` with a plain-text notice that the survey has closed.
+- **AC 5:** Once a `SurveyResponse` exists for the user's `SurveyParticipation` in the current cycle, additional rating clicks in the same cycle are idempotent — the first response wins and no second record is created or mutated.
 
 ### US 1.2: AI Follow-up Conversation
 
@@ -25,6 +27,7 @@ This document outlines the functional requirements for HappyRisk AI from the per
 - **AC 1:** AI #1 generates one contextual follow-up question based on the rating and optional initial comment.
 - **AC 2:** The total survey conversation is capped at three bot messages and two user responses (< 60 seconds total) to avoid survey fatigue.
 - **AC 3:** `PARTIAL` responses (rating + optional comment, no follow-up) are preserved and their ratings are included in the Happiness Index calculation.
+- **AC 4:** Once the `SurveyResponse` reaches `conversation_status: COMPLETE`, any further free-text messages the user sends in the DM are **not** stored and do **not** trigger AI calls. The bot replies at most once per `SurveyCycle` with a short notice that the survey is already saved; subsequent out-of-flow messages are silently ignored.
 
 ### US 1.3: Feedback Loop Notification
 
@@ -276,7 +279,7 @@ This document outlines the functional requirements for HappyRisk AI from the per
 
 - **AC 1:** A "Connect Slack" button on the Project Settings page initiates the standard Slack OAuth 2.0 app installation flow.
 - **AC 2:** The OAuth flow uses a signed `state` parameter (CSRF protection) that encodes the `projectId`.
-- **AC 3:** On successful installation, `SlackInstallation` is upserted (workspace ID, bot token, bot user ID) and `Project.slack_workspace_id` is set automatically.
+- **AC 3:** On successful installation, `SlackInstallation` is upserted (workspace ID, bot token, bot user ID) and linked one-to-one to the `Project`.
 - **AC 4:** If the Slack workspace is already connected to a different project, the flow is rejected with a `409 Conflict` error and a user-facing message.
 - **AC 5:** After a successful connection, the user is redirected back to Project Settings with a `?slackConnected=true` confirmation.
 
